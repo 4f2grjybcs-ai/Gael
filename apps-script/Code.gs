@@ -14,6 +14,8 @@ var ITEM_COLS = ['id', 'name', 'kind', 'cat', 'loc', 'qty', 'unit', 'min', 'stat
 var LOG_COLS = ['at', 'by', 'item', 'text'];
 var LOG_SHOWN = 200;   // mouvements renvoyés à l'app
 var LOG_KEEP = 2000;   // mouvements conservés dans le Sheet
+// Code d'équipe par défaut (laisser vide = pas de code). Une valeur dans l'onglet « Réglages » du Sheet est prioritaire.
+var TEAM_CODE = '';
 var STATUSES = { camion: 'dans le camion', chantier: 'sur chantier', atelier: 'en réparation', manquant: 'manquant' };
 
 function doGet() {
@@ -118,7 +120,7 @@ function setConf_(key, val) {
 }
 
 function checkCode_(code) {
-  var expected = String(conf_().code || '').trim();
+  var expected = String(conf_().code || '').trim() || String(TEAM_CODE || '').trim();
   if (expected && String(code || '').trim() !== expected) throw new Error('CODE_EQUIPE');
 }
 
