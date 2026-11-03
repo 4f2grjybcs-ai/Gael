@@ -346,7 +346,8 @@ function renderSummary(){
 
 function renderBanner(){
   let h = "";
-  if (S.failed) h = `<div class="banner">Impossible de joindre le stock. Vérifie le réseau ; l'app réessaie toute seule. <button id="retryBtn">Réessayer</button></div>`;
+  if (S.demo) h = `<div class="banner"><b>Mode test</b> : les données restent sur ce téléphone, rien n'est partagé. Pour l'équipe, il faudra installer la version Google.</div>`;
+  else if (S.failed) h = `<div class="banner">Impossible de joindre le stock. Vérifie le réseau ; l'app réessaie toute seule. <button id="retryBtn">Réessayer</button></div>`;
   else if (S.stale) h = `<div class="banner">Pas de réseau : affichage de la dernière version connue${S.lastSync ? " (" + new Date(S.lastSync).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}) + ")" : ""}. Les modifications ne passent pas pour l'instant.</div>`;
   $("#bannerSlot").innerHTML = h;
   const r = $("#retryBtn"); if (r) r.onclick = () => refresh(true);
@@ -504,6 +505,7 @@ function setSync(){
   else if (S.failed && !S.loaded){ dot.classList.add("bad"); t.textContent = "Stock injoignable"; }
   else if (!S.loaded){ t.textContent = "Connexion…"; }
   else if (S.stale || S.failed){ dot.classList.add("warn"); t.textContent = "Hors ligne · peut ne pas être à jour"; }
+  else if (S.demo){ dot.classList.add("warn"); t.textContent = "Mode test · sur ce téléphone uniquement"; }
   else { dot.classList.add("ok"); t.textContent = "À jour · partagé avec l'équipe"; }
 }
 
@@ -527,11 +529,89 @@ function closeSheet(){ const s = $("#scrim"); if (s) s.remove(); }
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
 
 /* ---------- Échanges avec le Google Sheet ---------- */
+const IS_GAS = !!(window.google && google.script && google.script.run);
+S.demo = !IS_GAS;
 function rawCall(req){
   return new Promise((res, rej) => {
-    if (!(window.google && google.script && google.script.run)) { rej(new Error("HORS_APPS_SCRIPT")); return; }
+    if (!IS_GAS){ setTimeout(() => { try { res(localApi(req)); } catch(e){ rej(e); } }, 60); return; }
     google.script.run.withSuccessHandler(res).withFailureHandler(rej).api(req);
   });
+}
+
+/* ---------- Mode test : tout reste sur ce téléphone (même logique que Code.gs) ---------- */
+const DEMO_KEY = "stockcamion.demo";
+const ST_TXT = {camion:"dans le camion", chantier:"sur chantier", atelier:"en réparation", manquant:"manquant"};
+function demoRead(){
+  try { const d = JSON.parse(localStorage.getItem(DEMO_KEY) || "null"); if (d && Array.isArray(d.items)) return d; } catch(e){}
+  return {items:[], log:[], config:{vehicle:""}};
+}
+function localApi(req){
+  const d = demoRead(), by = String(req.by || "Quelqu'un").slice(0,30), now = Date.now();
+  const clean = (v, n) => String(v == null ? "" : v).trim().slice(0, n || 200);
+  const log = (item, text) => { d.log.unshift({at: Date.now(), by, item: clean(item,120), text: clean(text)}); d.log = d.log.slice(0, 500); };
+  const find = id => { const it = d.items.find(i => i.id === id); if (!it) throw new Error("ARTICLE_INTROUVABLE"); return it; };
+  const u = it => it.unit || "u";
+  const san = it => {
+    const kind = it.kind === "conso" ? "conso" : "outil";
+    const status = kind === "outil" ? (ST_TXT[it.status] ? it.status : "camion") : "";
+    const qty = Math.max(0, parseInt(it.qty,10) || 0);
+    return {name: clean(it.name,80), kind, cat: clean(it.cat,40) || "Divers", loc: clean(it.loc,40),
+      qty: kind === "outil" ? Math.max(1, qty || 1) : qty, unit: kind === "conso" ? clean(it.unit,20) : "",
+      min: kind === "conso" ? Math.max(0, parseInt(it.min,10) || 0) : 0, status,
+      holder: status && status !== "camion" ? clean(it.holder,80) : "", note: clean(it.note,300)};
+  };
+  const newId = () => Math.random().toString(36).slice(2,10) + now.toString(36).slice(-4);
+  switch (req.action){
+    case "load": break;
+    case "bulk": {
+      const list = (req.items || []).slice(0,150).map(san).filter(x => x.name);
+      list.forEach(x => d.items.push(Object.assign({id:newId()}, x, {createdAt:now, updatedAt:now, updatedBy:by})));
+      if (list.length) log("Liste type couvreur", `chargée (${list.length} articles)`);
+      break;
+    }
+    case "save": {
+      const x = san(req.item || {}); if (!x.name) throw new Error("NOM_MANQUANT");
+      const old = req.item.id && d.items.find(i => i.id === req.item.id);
+      if (old){
+        const ch = [];
+        if (x.kind === "outil" && old.status !== x.status) ch.push("→ " + ST_TXT[x.status] + (x.holder ? " (" + x.holder + ")" : ""));
+        if (x.kind === "conso" && old.qty !== x.qty) ch.push(": stock corrigé à " + x.qty + " " + u(x));
+        Object.assign(old, x, {updatedAt:now, updatedBy:by});
+        log(x.name, ch.length ? ch.join(", ") : "fiche modifiée");
+      } else {
+        d.items.push(Object.assign({id:newId()}, x, {createdAt:now, updatedAt:now, updatedBy:by}));
+        log(x.name, "ajouté au stock" + (x.kind === "conso" ? " (" + x.qty + " " + u(x) + ")" : ""));
+      }
+      break;
+    }
+    case "delete": { const it = find(String(req.id)); d.items = d.items.filter(i => i !== it); log(it.name, "supprimé du stock"); break; }
+    case "adjust": {
+      const it = find(String(req.id)), from = it.qty, q = Math.max(0, from + (parseInt(req.delta,10) || 0)), dd = q - from;
+      if (!dd) break;
+      Object.assign(it, {qty:q, updatedAt:now, updatedBy:by});
+      log(it.name, dd < 0 ? `: ${-dd} ${u(it)} utilisé${-dd>1?"s":""} (reste ${q})` : `: +${dd} ${u(it)} ajouté${dd>1?"s":""} (total ${q})`);
+      break;
+    }
+    case "status": {
+      if (!ST_TXT[req.status]) throw new Error("STATUT_INCONNU");
+      const it = find(String(req.id)), h = req.status === "camion" ? "" : clean(req.holder,80);
+      if (it.status === req.status && it.holder === h) break;
+      Object.assign(it, {status:req.status, holder:h, updatedAt:now, updatedBy:by});
+      log(it.name, req.status === "camion" ? "rangé dans le camion" : "→ " + ST_TXT[req.status] + (h ? " (" + h + ")" : ""));
+      break;
+    }
+    case "config": d.config.vehicle = clean(req.vehicle,40); break;
+    default: throw new Error("ACTION_INCONNUE");
+  }
+  if (req.action !== "load"){
+    try { localStorage.setItem(DEMO_KEY, JSON.stringify(d)); }
+    catch(e){ throw new Error("STOCKAGE_LOCAL_INDISPONIBLE"); }
+  }
+  return {items:d.items, log:d.log.slice(0,200), config:d.config};
+}
+function demoReset(){
+  try { localStorage.removeItem(DEMO_KEY); localStorage.removeItem("stockcamion.cache"); } catch(e){}
+  S.items = []; S.log = []; S.config = {}; refresh(true);
 }
 function applyState(st){
   if (!st || !Array.isArray(st.items)) return;
@@ -552,7 +632,7 @@ async function api(action, extra, quiet){
     const c = errCode(e);
     if (c === "CODE_EQUIPE"){ askCode(!!S.code); return false; }
     if (action === "load"){ S.failed = true; if (S.loaded) S.stale = true; render(); setSync(); return false; }
-    if (!quiet) toast(c === "ARTICLE_INTROUVABLE" ? "Cet article a été supprimé entre-temps" : c === "HORS_APPS_SCRIPT" ? "Ouvre l'app depuis son lien Google" : "Pas enregistré : vérifie le réseau et réessaie");
+    if (!quiet) toast(c === "ARTICLE_INTROUVABLE" ? "Cet article a été supprimé entre-temps" : c === "STOCKAGE_LOCAL_INDISPONIBLE" ? "Ce navigateur bloque l'enregistrement local (navigation privée ?)" : "Pas enregistré : vérifie le réseau et réessaie");
     refresh();
     return false;
   } finally {
@@ -726,8 +806,14 @@ function openSettings(){
       <p class="hint">Pour ajouter un collègue, envoie-lui simplement le lien de l'app (et le code d'équipe s'il y en a un). Pas besoin de compte.</p>
       <p class="hint">Astuce : dans le navigateur du téléphone, « Ajouter à l'écran d'accueil » crée une icône comme une vraie appli.</p>
       <div class="actions"><button type="submit" class="btn primary grow">Enregistrer</button><button type="button" class="btn" id="setCancel">Fermer</button></div>
+      ${S.demo ? `<div class="actions"><button type="button" class="btn danger" id="demoReset">Effacer toutes les données de test</button></div>` : ""}
     </form>`);
   $("#setCancel").onclick = closeSheet;
+  const dr = $("#demoReset");
+  if (dr) dr.onclick = () => {
+    if (!dr.classList.contains("armed")){ dr.classList.add("armed"); dr.textContent = "Confirmer : tout effacer"; return; }
+    demoReset(); closeSheet(); toast("Données de test effacées");
+  };
   $("#setForm").onsubmit = async e => {
     e.preventDefault();
     const nick = $("#s_nick").value.trim(), veh = $("#s_veh").value.trim();
