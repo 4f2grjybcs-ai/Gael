@@ -49,7 +49,37 @@ function api(req) {
 
 /* ---------- Feuilles ---------- */
 
-function ss_() { return SpreadsheetApp.getActiveSpreadsheet(); }
+var SS_CACHE_ = null;
+/**
+ * Le Sheet des données : celui auquel le script est rattaché (Extensions → Apps Script),
+ * sinon un Sheet « Stock Camion – données » créé automatiquement dans ton Drive
+ * (projet créé directement sur script.google.com, pratique sur iPad).
+ */
+function ss_() {
+  if (SS_CACHE_) return SS_CACHE_;
+  var active = SpreadsheetApp.getActiveSpreadsheet();
+  if (active) return (SS_CACHE_ = active);
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty('SHEET_ID');
+  if (id) { try { return (SS_CACHE_ = SpreadsheetApp.openById(id)); } catch (e) {} }
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    id = props.getProperty('SHEET_ID');
+    if (id) { try { return (SS_CACHE_ = SpreadsheetApp.openById(id)); } catch (e) {} }
+    var ss = SpreadsheetApp.create('Stock Camion – données');
+    props.setProperty('SHEET_ID', ss.getId());
+    return (SS_CACHE_ = ss);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/** À lancer une fois depuis l'éditeur (bouton Exécuter) : crée les onglets et affiche le lien du Sheet. */
+function installer() {
+  sheet_(SHEET_ITEMS, ITEM_COLS); sheet_(SHEET_LOG, LOG_COLS); sheet_(SHEET_CONF, ['clé', 'valeur']);
+  Logger.log('Données : ' + ss_().getUrl());
+}
 
 function sheet_(name, cols) {
   var sh = ss_().getSheetByName(name);

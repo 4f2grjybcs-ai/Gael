@@ -1,5 +1,7 @@
 # Installer Stock Camion (10 minutes, une seule fois)
 
+> **Sur iPad ou sans passer par Google Sheets** : ouvre directement **script.google.com → Nouveau projet**, puis fais les étapes 2 et 3 ci-dessous. Le Sheet « Stock Camion – données » est créé automatiquement dans ton Drive à la première ouverture de l'app.
+
 Il te faut seulement un compte Google (Gmail). Tes collègues n'ont besoin de rien.
 
 ## 1. Créer le Google Sheet
