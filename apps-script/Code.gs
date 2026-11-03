@@ -12,6 +12,11 @@ var SHEET_LOG = 'Historique';
 var SHEET_CONF = 'Réglages';
 var ITEM_COLS = ['id', 'name', 'kind', 'cat', 'loc', 'qty', 'unit', 'min', 'status', 'holder', 'note', 'createdAt', 'updatedAt', 'updatedBy'];
 var LOG_COLS = ['at', 'by', 'item', 'text'];
+var SHEET_SITES = 'Chantiers';
+var SHEET_LINES = 'À prendre';
+var SITE_COLS = ['id', 'name', 'info', 'note', 'done', 'createdAt', 'updatedAt', 'updatedBy'];
+var LINE_COLS = ['id', 'siteId', 'label', 'qty', 'unit', 'type', 'itemId', 'ready', 'readyBy', 'readyAt', 'createdAt', 'by'];
+var LINE_TYPES = ['outils', 'visserie', 'materiaux', 'materiel', 'autre'];
 var LOG_SHOWN = 200;   // mouvements renvoyés à l'app
 var LOG_KEEP = 2000;   // mouvements conservés dans le Sheet
 // Code d'équipe par défaut (laisser vide = pas de code). Une valeur dans l'onglet « Réglages » du Sheet est prioritaire.
@@ -40,6 +45,13 @@ function api(req) {
       case 'status': setStatus_(String(req.id || ''), req.status, req.holder, by); break;
       case 'config': setConf_('vehicle', clean_(req.vehicle, 40)); break;
       case 'bulk':   addBulk_(req.items || [], by); break;
+      case 'siteSave':   siteSave_(req.site || {}, by); break;
+      case 'siteDelete': siteDelete_(String(req.id || ''), by); break;
+      case 'siteReset':  siteReset_(String(req.id || ''), by); break;
+      case 'lineAdd':    lineAdd_(String(req.siteId || ''), req.line || {}, by); break;
+      case 'lineSave':   lineSave_(req.line || {}); break;
+      case 'lineToggle': lineToggle_(String(req.id || ''), !!req.ready, by); break;
+      case 'lineDelete': lineDelete_(String(req.id || '')); break;
       default: throw new Error('ACTION_INCONNUE');
     }
     SpreadsheetApp.flush();
@@ -160,7 +172,7 @@ function state_() {
     log.reverse();
   }
   var c = conf_();
-  return { items: readItems_(), log: log, config: { vehicle: String(c.vehicle || '') }, serverTime: Date.now() };
+  return { items: readItems_(), sites: readSites_(), lines: readLines_(), log: log, config: { vehicle: String(c.vehicle || '') }, serverTime: Date.now() };
 }
 
 /* ---------- Écritures ---------- */
@@ -177,7 +189,7 @@ function findRow_(sh, idx, id) {
 function writeRow_(sh, h, row, item) {
   var arr = h.head.map(function (col) {
     var k = String(col).trim();
-    if (k === 'createdAt' || k === 'updatedAt') return item[k] ? new Date(item[k]) : '';
+    if (/At$/.test(k)) return item[k] ? new Date(item[k]) : '';
     return item.hasOwnProperty(k) ? item[k] : '';
   });
   sh.getRange(row, 1, 1, arr.length).setValues([arr]);
@@ -282,4 +294,129 @@ function setStatus_(id, status, holder, by) {
   r.item.status = status; r.item.holder = holder; r.item.updatedAt = Date.now(); r.item.updatedBy = by;
   writeRow_(r.sh, r.h, r.row, r.item);
   addLog_(by, r.item.name, status === 'camion' ? 'rangé dans le camion' : '→ ' + STATUSES[status] + (holder ? ' (' + holder + ')' : ''));
+}
+
+
+/* ---------- Chantiers et listes « à prendre » ---------- */
+
+function bool_(v) { return v === true || String(v).toUpperCase() === 'TRUE' || v === 1 || v === '1'; }
+
+function readTable_(name, cols, map) {
+  var sh = sheet_(name, cols);
+  var h = headIndex_(sh);
+  var v = sh.getDataRange().getValues();
+  var out = [];
+  for (var i = 1; i < v.length; i++) {
+    if (!v[i][h.idx.id]) continue;
+    var r = {};
+    cols.forEach(function (c) { r[c] = h.idx[c] == null ? '' : v[i][h.idx[c]]; });
+    out.push(map(r));
+  }
+  return out;
+}
+
+function readSites_() {
+  return readTable_(SHEET_SITES, SITE_COLS, function (r) {
+    return { id: String(r.id), name: String(r.name), info: String(r.info), note: String(r.note), done: bool_(r.done),
+      createdAt: num_(r.createdAt), updatedAt: num_(r.updatedAt), updatedBy: String(r.updatedBy) };
+  });
+}
+
+function readLines_() {
+  return readTable_(SHEET_LINES, LINE_COLS, function (r) {
+    return { id: String(r.id), siteId: String(r.siteId), label: String(r.label), qty: String(r.qty), unit: String(r.unit),
+      type: LINE_TYPES.indexOf(String(r.type)) >= 0 ? String(r.type) : 'autre', itemId: String(r.itemId),
+      ready: bool_(r.ready), readyBy: String(r.readyBy), readyAt: num_(r.readyAt), createdAt: num_(r.createdAt), by: String(r.by) };
+  });
+}
+
+function tableRow_(name, cols, id) {
+  var sh = sheet_(name, cols);
+  var h = headIndex_(sh);
+  var row = findRow_(sh, h.idx, id);
+  if (row < 0) throw new Error('ELEMENT_INTROUVABLE');
+  var vals = sh.getRange(row, 1, 1, h.head.length).getValues()[0];
+  var obj = {};
+  h.head.forEach(function (c, i) { obj[String(c).trim()] = vals[i] instanceof Date ? vals[i].getTime() : vals[i]; });
+  return { sh: sh, h: h, row: row, obj: obj };
+}
+
+function siteSave_(raw, by) {
+  var name = clean_(raw.name, 80);
+  if (!name) throw new Error('NOM_MANQUANT');
+  var data = { name: name, info: clean_(raw.info, 120), note: clean_(raw.note, 300), done: !!raw.done, updatedAt: Date.now(), updatedBy: by };
+  var sh = sheet_(SHEET_SITES, SITE_COLS);
+  var h = headIndex_(sh);
+  var row = findRow_(sh, h.idx, String(raw.id || ''));
+  if (row > 0) {
+    var r = tableRow_(SHEET_SITES, SITE_COLS, String(raw.id));
+    var wasDone = bool_(r.obj.done);
+    writeRow_(sh, h, row, Object.assign(r.obj, data));
+    if (wasDone !== data.done) addLog_(by, 'Chantier ' + name, data.done ? 'marqué terminé' : 'réouvert');
+  } else {
+    writeRow_(sh, h, sh.getLastRow() + 1, Object.assign({ id: Utilities.getUuid().slice(0, 13), createdAt: Date.now() }, data));
+    addLog_(by, 'Chantier ' + name, 'créé');
+  }
+}
+
+function siteDelete_(id, by) {
+  var r = tableRow_(SHEET_SITES, SITE_COLS, id);
+  r.sh.deleteRow(r.row);
+  var lsh = sheet_(SHEET_LINES, LINE_COLS);
+  var lh = headIndex_(lsh);
+  var last = lsh.getLastRow();
+  if (last > 1) {
+    var sids = lsh.getRange(2, lh.idx.siteId + 1, last - 1, 1).getValues();
+    for (var i = sids.length - 1; i >= 0; i--) if (String(sids[i][0]) === id) lsh.deleteRow(i + 2);
+  }
+  addLog_(by, 'Chantier ' + r.obj.name, 'supprimé');
+}
+
+function siteReset_(id, by) {
+  var site = tableRow_(SHEET_SITES, SITE_COLS, id);
+  var lsh = sheet_(SHEET_LINES, LINE_COLS);
+  var lh = headIndex_(lsh);
+  var last = lsh.getLastRow();
+  if (last < 2) return;
+  var rng = lsh.getRange(2, 1, last - 1, lh.head.length);
+  var v = rng.getValues();
+  var changed = 0;
+  v.forEach(function (r) {
+    if (String(r[lh.idx.siteId]) === id && bool_(r[lh.idx.ready])) {
+      r[lh.idx.ready] = false; r[lh.idx.readyBy] = ''; r[lh.idx.readyAt] = ''; changed++;
+    }
+  });
+  if (changed) { rng.setValues(v); addLog_(by, 'Chantier ' + site.obj.name, 'liste remise à préparer (' + changed + ' lignes)'); }
+}
+
+function lineData_(raw) {
+  return { label: clean_(raw.label, 100), qty: clean_(raw.qty, 12), unit: clean_(raw.unit, 20),
+    type: LINE_TYPES.indexOf(raw.type) >= 0 ? raw.type : 'autre', itemId: clean_(raw.itemId, 40) };
+}
+
+function lineAdd_(siteId, raw, by) {
+  tableRow_(SHEET_SITES, SITE_COLS, siteId);
+  var d = lineData_(raw);
+  if (!d.label) throw new Error('NOM_MANQUANT');
+  var sh = sheet_(SHEET_LINES, LINE_COLS);
+  var h = headIndex_(sh);
+  writeRow_(sh, h, sh.getLastRow() + 1, Object.assign({ id: Utilities.getUuid().slice(0, 13), siteId: siteId, ready: false, readyBy: '', readyAt: 0, createdAt: Date.now(), by: by }, d));
+}
+
+function lineSave_(raw) {
+  var r = tableRow_(SHEET_LINES, LINE_COLS, String(raw.id || ''));
+  var d = lineData_(raw);
+  if (!d.label) throw new Error('NOM_MANQUANT');
+  writeRow_(r.sh, r.h, r.row, Object.assign(r.obj, d));
+}
+
+function lineToggle_(id, ready, by) {
+  var r = tableRow_(SHEET_LINES, LINE_COLS, id);
+  Object.assign(r.obj, { ready: ready, readyBy: ready ? by : '', readyAt: ready ? Date.now() : 0 });
+  writeRow_(r.sh, r.h, r.row, r.obj);
+}
+
+function lineDelete_(id) {
+  var r = tableRow_(SHEET_LINES, LINE_COLS, id);
+  r.sh.deleteRow(r.row);
 }

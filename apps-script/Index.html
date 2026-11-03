@@ -126,10 +126,46 @@ main{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 .buy-row .r b{font-family:var(--f-display);font-size:22px;display:block;line-height:1}
 .copy-box{width:100%;min-height:120px;margin-top:10px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);padding:10px}
 
+/* Chantiers */
+.site-row{display:flex;align-items:center;gap:12px;width:100%;border:0;border-top:1px solid var(--line);background:none;text-align:left;padding:12px 14px;min-height:64px}
+.site-row:first-child{border-top:0}
+.site-row .l{flex:1;min-width:0}
+.site-row .l b{display:block;font-size:16px;overflow-wrap:anywhere}
+.site-row .l span{display:block;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.prog{flex:none;width:92px;text-align:right;font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.prog b{font-family:var(--f-display);font-size:20px;color:var(--fg)}
+.bar{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden;margin-top:4px}
+.bar i{display:block;height:100%;background:var(--ok);border-radius:3px}
+.prog.full b{color:var(--ok)}
+.site-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding-block:14px 4px}
+.back{border:0;background:none;color:var(--accent);font-weight:600;font-size:16px;padding:8px 0}
+.site-title{margin:6px 0 2px;font-family:var(--f-display);font-size:30px;line-height:1.05;text-wrap:balance;overflow-wrap:anywhere}
+.site-prog{display:flex;align-items:center;gap:12px;margin:10px 0 4px;font-size:14px;color:var(--muted)}
+.site-prog .bar{flex:1;height:8px;margin:0}
+.addline{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px;display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.addline .r1{display:grid;grid-template-columns:1fr 64px 84px;gap:8px}
+.addline input{height:46px;border-radius:8px;border:1px solid var(--line);background:var(--bg);padding:0 10px;width:100%;min-width:0}
+.addline .btn{width:100%}
+.tchips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.tchips::-webkit-scrollbar{display:none}
+.line{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;border-top:1px solid var(--line);min-height:60px}
+.line:first-child{border-top:0}
+.tog{flex:none;width:104px;border:0;border-radius:999px;padding:9px 6px;font-size:13px;font-weight:700}
+.tog.todo{background:var(--warn-soft);color:var(--warn)}
+.tog.ready{background:var(--ok-soft);color:var(--ok)}
+.line .lm{flex:1;min-width:0;border:0;background:none;text-align:left;padding:2px 0;display:flex;flex-direction:column;gap:1px}
+.line .lm b{font-size:16px;font-weight:600;overflow-wrap:anywhere}
+.line .lm span{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.line .lm .flag{color:var(--bad);font-weight:600}
+.line.is-ready .lm b{color:var(--muted);text-decoration:line-through;text-decoration-thickness:1px}
+.line .qty{flex:none;text-align:right;font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted);max-width:30%}
+.line .qty b{display:block;font-family:var(--f-display);font-size:22px;color:var(--fg);line-height:1}
+.linkbtn{border:0;background:none;color:var(--muted);text-decoration:underline;padding:10px 0;font-size:14px}
+
 /* Barre du bas */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-nav.tabs .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
-nav.tabs button{border:0;background:none;padding:8px 4px 9px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12.5px;color:var(--muted);position:relative}
+nav.tabs .wrap{display:grid;grid-template-columns:repeat(5,1fr)}
+nav.tabs button{border:0;background:none;padding:8px 2px 9px;min-width:0;white-space:nowrap;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12.5px;color:var(--muted);position:relative}
 nav.tabs button svg{width:22px;height:22px}
 nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:600}
 .badge{position:absolute;top:4px;left:calc(50% + 6px);background:var(--bad);color:#fff;border-radius:999px;font-size:11px;font-weight:700;min-width:18px;height:18px;line-height:18px;padding:0 5px}
@@ -209,6 +245,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:600}
     <div id="list"><div class="empty"><h3>Chargement du stock…</h3><p>Les outils et consommables du camion s'affichent ici dès que la connexion répond.</p></div></div>
   </section>
 
+  <section id="viewSites" hidden></section>
   <section id="viewBuy" hidden></section>
   <section id="viewLog" hidden></section>
 </main>
@@ -223,7 +260,10 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:600}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14.5 5.5a4 4 0 0 0-5 5L4 16l4 4 5.5-5.5a4 4 0 0 0 5-5l-2.5 2.5-2.5-.5-.5-2.5z"/></svg>Outillage
     </button>
     <button data-view="conso">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10l-1 4H8z"/><path d="M12 7v14M9 10l6 1.5M9 13.5l6 1.5M9 17l6 1.5"/></svg>Consommables
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10l-1 4H8z"/><path d="M12 7v14M9 10l6 1.5M9 13.5l6 1.5M9 17l6 1.5"/></svg>Conso
+    </button>
+    <button data-view="sites">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="m9 15 2 2 4-4"/></svg>Chantiers
     </button>
     <button data-view="buy">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h11M9 12h11M9 19h11"/><path d="m3 5 1.5 1.5L7 4M3 12l1.5 1.5L7 11M3 19l1.5 1.5L7 18"/></svg>À racheter<span class="badge" id="buyBadge" hidden>0</span>
@@ -293,6 +333,7 @@ const TEMPLATE = [
 const S = {
   code:"", by:"", items:[], log:[], config:{},
   loaded:false, stale:false, failed:false, busy:0, lastSync:0,
+  sites:[], lines:[], siteId:"", showDone:false, lineType:"materiel",
   view:"stock", q:"", cat:"", group:"cat",
   pending:{}
 };
@@ -328,6 +369,7 @@ function whoName(by){
 function render(){
   renderSummary(); renderBanner();
   if (isListView()) renderStock();
+  if (S.view === "sites") renderSites();
   if (S.view === "buy") renderBuy();
   if (S.view === "log") renderLog();
   const n = S.items.filter(it => isLow(it) || needsTool(it)).length;
@@ -507,6 +549,7 @@ function setView(v){
   S.view = v;
   $("#q").placeholder = v === "conso" ? "Chercher : vis, crochets, mastic…" : "Chercher : cisaille, perfo, harnais…";
   $("#viewStock").hidden = !isListView();
+  $("#viewSites").hidden = v !== "sites";
   $("#viewBuy").hidden = v !== "buy";
   $("#viewLog").hidden = v !== "log";
   document.querySelectorAll("nav.tabs button").forEach(b => b.dataset.view === v ? b.setAttribute("aria-current","page") : b.removeAttribute("aria-current"));
@@ -559,7 +602,7 @@ const DEMO_KEY = "stockcamion.demo";
 const ST_TXT = {camion:"dans le camion", chantier:"sur chantier", atelier:"en réparation", manquant:"manquant"};
 function demoRead(){
   try { const d = JSON.parse(localStorage.getItem(DEMO_KEY) || "null"); if (d && Array.isArray(d.items)) return d; } catch(e){}
-  return {items:[], log:[], config:{vehicle:""}};
+  return {items:[], sites:[], lines:[], log:[], config:{vehicle:""}};
 }
 function localApi(req){
   const d = demoRead(), by = String(req.by || "Quelqu'un").slice(0,30), now = Date.now();
@@ -617,13 +660,44 @@ function localApi(req){
       break;
     }
     case "config": d.config.vehicle = clean(req.vehicle,40); break;
+    case "siteSave": {
+      d.sites = d.sites || []; d.lines = d.lines || [];
+      const name = clean(req.site && req.site.name, 80); if (!name) throw new Error("NOM_MANQUANT");
+      const x = {name, info: clean(req.site.info,120), note: clean(req.site.note,300), done: !!req.site.done, updatedAt: now, updatedBy: by};
+      const old = req.site.id && d.sites.find(z => z.id === req.site.id);
+      if (old){ if (old.done !== x.done) log("Chantier " + name, x.done ? "marqué terminé" : "réouvert"); Object.assign(old, x); }
+      else { d.sites.push(Object.assign({id:newId(), createdAt:now}, x)); log("Chantier " + name, "créé"); }
+      break;
+    }
+    case "siteDelete": {
+      const st = (d.sites||[]).find(z => z.id === req.id); if (!st) throw new Error("ELEMENT_INTROUVABLE");
+      d.sites = d.sites.filter(z => z !== st); d.lines = (d.lines||[]).filter(l => l.siteId !== st.id); log("Chantier " + st.name, "supprimé"); break;
+    }
+    case "siteReset": {
+      const st = (d.sites||[]).find(z => z.id === req.id); if (!st) throw new Error("ELEMENT_INTROUVABLE");
+      let n = 0; (d.lines||[]).forEach(l => { if (l.siteId === st.id && l.ready){ l.ready = false; l.readyBy = ""; l.readyAt = 0; n++; } });
+      if (n) log("Chantier " + st.name, `liste remise à préparer (${n} lignes)`); break;
+    }
+    case "lineAdd": case "lineSave": {
+      d.lines = d.lines || [];
+      const L = req.line || {}, types = ["outils","visserie","materiaux","materiel","autre"];
+      const x = {label: clean(L.label,100), qty: clean(L.qty,12), unit: clean(L.unit,20), type: types.includes(L.type) ? L.type : "autre", itemId: clean(L.itemId,40)};
+      if (!x.label) throw new Error("NOM_MANQUANT");
+      if (req.action === "lineAdd"){
+        if (!(d.sites||[]).some(z => z.id === req.siteId)) throw new Error("ELEMENT_INTROUVABLE");
+        d.lines.push(Object.assign({id:newId(), siteId:req.siteId, ready:false, readyBy:"", readyAt:0, createdAt:now, by}, x));
+      } else { const l = d.lines.find(z => z.id === L.id); if (!l) throw new Error("ELEMENT_INTROUVABLE"); Object.assign(l, x); }
+      break;
+    }
+    case "lineToggle": { const l = (d.lines||[]).find(z => z.id === req.id); if (!l) throw new Error("ELEMENT_INTROUVABLE"); Object.assign(l, {ready: !!req.ready, readyBy: req.ready ? by : "", readyAt: req.ready ? now : 0}); break; }
+    case "lineDelete": { d.lines = (d.lines||[]).filter(z => z.id !== req.id); break; }
     default: throw new Error("ACTION_INCONNUE");
   }
   if (req.action !== "load"){
     try { localStorage.setItem(DEMO_KEY, JSON.stringify(d)); }
     catch(e){ throw new Error("STOCKAGE_LOCAL_INDISPONIBLE"); }
   }
-  return {items:d.items, log:d.log.slice(0,200), config:d.config};
+  return {items:d.items, sites:d.sites||[], lines:d.lines||[], log:d.log.slice(0,200), config:d.config};
 }
 function demoReset(){
   try { localStorage.removeItem(DEMO_KEY); localStorage.removeItem("stockcamion.cache"); } catch(e){}
@@ -632,8 +706,9 @@ function demoReset(){
 function applyState(st){
   if (!st || !Array.isArray(st.items)) return;
   S.items = st.items; S.log = st.log || []; S.config = st.config || {};
+  S.sites = st.sites || []; S.lines = st.lines || [];
   S.loaded = true; S.failed = false; S.stale = false; S.lastSync = Date.now();
-  try { localStorage.setItem("stockcamion.cache", JSON.stringify({items:S.items, log:S.log, config:S.config, at:S.lastSync})); } catch(e){}
+  try { localStorage.setItem("stockcamion.cache", JSON.stringify({items:S.items, sites:S.sites, lines:S.lines, log:S.log, config:S.config, at:S.lastSync})); } catch(e){}
   render(); setSync();
 }
 function errCode(e){ const m = String((e && e.message) || e || ""); return (m.match(/[A-Z_]{5,}/) || [""])[0]; }
@@ -648,7 +723,7 @@ async function api(action, extra, quiet){
     const c = errCode(e);
     if (c === "CODE_EQUIPE"){ askCode(!!S.code); return false; }
     if (action === "load"){ S.failed = true; if (S.loaded) S.stale = true; render(); setSync(); return false; }
-    if (!quiet) toast(c === "ARTICLE_INTROUVABLE" ? "Cet article a été supprimé entre-temps" : c === "STOCKAGE_LOCAL_INDISPONIBLE" ? "Ce navigateur bloque l'enregistrement local (navigation privée ?)" : "Pas enregistré : vérifie le réseau et réessaie");
+    if (!quiet) toast(c === "ARTICLE_INTROUVABLE" || c === "ELEMENT_INTROUVABLE" ? "Cet élément a été supprimé entre-temps" : c === "STOCKAGE_LOCAL_INDISPONIBLE" ? "Ce navigateur bloque l'enregistrement local (navigation privée ?)" : "Pas enregistré : vérifie le réseau et réessaie");
     refresh();
     return false;
   } finally {
@@ -785,6 +860,208 @@ function openStatus(id){
   };
 }
 
+/* ---------- Chantiers : listes « à prendre » ---------- */
+const LTYPES = [["outils","Outils"],["visserie","Visserie"],["materiaux","Matériaux"],["materiel","Matériel"],["autre","Autre"]];
+const LTYPE_L = Object.fromEntries(LTYPES);
+function siteLines(id){ return S.lines.filter(l => l.siteId === id); }
+function siteProg(id){ const ls = siteLines(id); return {n: ls.length, r: ls.filter(l => l.ready).length}; }
+function itemByName(label){ const n = norm(label).trim(); return n ? S.items.find(i => norm(i.name).trim() === n) : null; }
+function typeForItem(it){ return it.kind === "outil" ? "outils" : (it.cat === "Fixations & visserie" ? "visserie" : "materiel"); }
+
+function renderSites(){
+  const v = $("#viewSites");
+  // garde la saisie en cours pendant les rafraîchissements automatiques
+  const keep = {}, act = document.activeElement && document.activeElement.id;
+  ["l_label","l_qty","l_unit"].forEach(id => { const el = $("#" + id); if (el) keep[id] = el.value; });
+  if (!S.loaded){ v.innerHTML = `<div class="empty"><h3>Chargement…</h3></div>`; return; }
+  const site = S.siteId && S.sites.find(x => x.id === S.siteId);
+  if (S.siteId && !site) S.siteId = "";
+  v.innerHTML = site ? siteDetailHTML(site) : sitesListHTML();
+  Object.entries(keep).forEach(([id, val]) => { const el = $("#" + id); if (el) el.value = val; });
+  if (act && $("#" + act) && /^l_/.test(act)) $("#" + act).focus();
+  if (site) wireSiteDetail(site); else wireSitesList();
+}
+
+function sitesListHTML(){
+  const cur = S.sites.filter(x => !x.done).sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0));
+  const done = S.sites.filter(x => x.done).sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0));
+  const row = st => {
+    const p = siteProg(st.id), pct = p.n ? Math.round(p.r / p.n * 100) : 0;
+    return `<button class="site-row" data-site="${esc(st.id)}"><div class="l"><b>${esc(st.name)}</b><span>${esc(st.info || (p.n ? "" : "Liste vide"))}</span></div>
+      <div class="prog ${p.n && p.r === p.n ? "full" : ""}">${p.n ? `<b>${p.r}/${p.n}</b> prêts<div class="bar"><i style="width:${pct}%"></i></div>` : "à remplir"}</div></button>`;
+  };
+  let h = `<div class="site-head"><span class="groupby">Ce qu'il faut charger pour chaque chantier</span><button class="btn primary" id="newSite">+ Chantier</button></div>`;
+  if (!S.sites.length) return h + `<div class="empty"><h3>Aucun chantier pour l'instant</h3><p>Crée un chantier, puis note tout ce qu'il faut emporter : outils, visserie, matériaux, matériel, avec les quantités. À l'atelier, chaque ligne se coche « Prêt » quand elle est chargée.</p><div class="btns"><button class="btn primary" id="newSite2">Créer le premier chantier</button></div></div>`;
+  if (cur.length) h += `<div class="group"><h2>En cours <small>${cur.length}</small></h2><div class="panel">${cur.map(row).join("")}</div></div>`;
+  else h += `<div class="empty"><h3>Aucun chantier en cours</h3><p>Les chantiers terminés sont rangés plus bas.</p></div>`;
+  if (done.length){
+    h += `<button class="linkbtn" id="toggleDone">${S.showDone ? "Masquer" : "Voir"} les chantiers terminés (${done.length})</button>`;
+    if (S.showDone) h += `<div class="group"><h2>Terminés</h2><div class="panel">${done.map(row).join("")}</div></div>`;
+  }
+  return h;
+}
+function wireSitesList(){
+  const v = $("#viewSites");
+  v.querySelectorAll("[data-site]").forEach(b => b.onclick = () => { S.siteId = b.dataset.site; render(); window.scrollTo({top:0}); });
+  ["newSite","newSite2"].forEach(id => { const b = $("#" + id); if (b) b.onclick = () => openSite(null); });
+  const t = $("#toggleDone"); if (t) t.onclick = () => { S.showDone = !S.showDone; render(); };
+}
+
+function lineMeta(l){
+  const it = l.itemId && S.items.find(i => i.id === l.itemId);
+  const bits = [];
+  if (it){
+    if (it.kind === "conso"){
+      const need = parseFloat(String(l.qty).replace(",", ".")), have = qtyOf(it);
+      const short = Number.isFinite(need) && have < need;
+      bits.push(`${short ? '<span class="flag">' : ""}Camion : ${have} ${esc(it.unit || "u")}${short ? " (pas assez)</span>" : ""}`);
+    } else {
+      const st = STATUS[it.status] || STATUS.camion;
+      bits.push(it.status === "camion" || !it.status ? "Dans le camion" : `${st.l}${it.holder ? " · " + esc(it.holder) : ""}`);
+    }
+  }
+  if (l.ready && l.readyBy) bits.push(`prêt · ${esc(whoName(l.readyBy))}`);
+  return bits.join(" · ");
+}
+function siteDetailHTML(st){
+  const ls = siteLines(st.id), p = siteProg(st.id), pct = p.n ? Math.round(p.r / p.n * 100) : 0;
+  const names = [...new Set(S.items.map(i => i.name))].sort(fr);
+  let h = `<div class="site-head"><button class="back" id="backSites">‹ Chantiers</button><button class="btn" id="editSite">Modifier</button></div>
+    <h2 class="site-title">${esc(st.name)}</h2>${st.info ? `<p class="hint">${esc(st.info)}</p>` : ""}${st.note ? `<p class="hint">${esc(st.note)}</p>` : ""}
+    ${st.done ? `<p class="hint"><span class="pill ok">Terminé</span></p>` : ""}
+    ${p.n ? `<div class="site-prog"><div class="bar"><i style="width:${pct}%"></i></div><span><b>${p.r}/${p.n}</b> prêts</span></div>` : ""}
+    <form class="addline" id="lineForm" novalidate>
+      <div class="tchips" id="ltypes">${LTYPES.map(([k,l]) => `<button type="button" class="chip" data-t="${k}" aria-pressed="${S.lineType===k}">${l}</button>`).join("")}</div>
+      <div class="r1">
+        <label class="sr" for="l_label">À prendre</label><input id="l_label" list="dl_stock" maxlength="100" placeholder="Vis 6×80, ardoises, perfo…" autocomplete="off">
+        <label class="sr" for="l_qty">Quantité</label><input id="l_qty" inputmode="decimal" maxlength="12" placeholder="Qté">
+        <label class="sr" for="l_unit">Unité</label><input id="l_unit" maxlength="20" placeholder="unité">
+      </div>
+      <datalist id="dl_stock">${names.map(n => `<option value="${esc(n)}">`).join("")}</datalist>
+      <button type="submit" class="btn primary">Ajouter à la liste</button>
+    </form>`;
+  if (!ls.length){
+    h += `<div class="empty"><h3>Liste vide</h3><p>Ajoute ce qu'il faut emporter. Choisis le type (outils, visserie, matériaux…), écris le nom et la quantité. Les articles du camion sont proposés pendant la saisie, avec le stock disponible.</p></div>`;
+    return h;
+  }
+  LTYPES.forEach(([k, lab]) => {
+    const g = ls.filter(l => l.type === k).sort((a,b) => (a.ready - b.ready) || (a.createdAt - b.createdAt));
+    if (!g.length) return;
+    const r = g.filter(l => l.ready).length;
+    h += `<div class="group"><h2>${lab} <small>${r}/${g.length} prêts</small></h2><div class="panel">${g.map(l => `
+      <div class="line ${l.ready ? "is-ready" : ""}" data-line="${esc(l.id)}">
+        <button class="tog ${l.ready ? "ready" : "todo"}" data-act="tog" aria-pressed="${l.ready}">${l.ready ? "Prêt ✓" : "À préparer"}</button>
+        <button class="lm" data-act="editl"><b>${esc(l.label)}</b>${lineMeta(l) ? `<span>${lineMeta(l)}</span>` : ""}</button>
+        ${l.qty || l.unit ? `<div class="qty"><b>${esc(l.qty)}</b>${esc(l.unit)}</div>` : ""}
+      </div>`).join("")}</div></div>`;
+  });
+  h += `<div class="btns" style="margin-top:16px"><button class="btn" id="copySite">Copier la liste</button>${p.r ? `<button class="btn" id="resetSite">Tout remettre « À préparer »</button>` : ""}</div>
+    <p class="hint" style="margin-top:8px">« Tout remettre à préparer » sert pour la prochaine fois : la liste reste, seules les coches s'effacent.</p><div id="copySlot"></div>`;
+  return h;
+}
+function wireSiteDetail(st){
+  $("#backSites").onclick = () => { S.siteId = ""; render(); window.scrollTo({top:0}); };
+  $("#editSite").onclick = () => openSite(st);
+  $("#ltypes").onclick = e => { const b = e.target.closest("[data-t]"); if (!b) return; S.lineType = b.dataset.t; $("#ltypes").querySelectorAll("[data-t]").forEach(x => x.setAttribute("aria-pressed", x === b)); $("#l_label").focus(); };
+  $("#l_label").addEventListener("change", () => {
+    const it = itemByName($("#l_label").value); if (!it) return;
+    S.lineType = typeForItem(it);
+    $("#ltypes").querySelectorAll("[data-t]").forEach(x => x.setAttribute("aria-pressed", x.dataset.t === S.lineType));
+    if (!$("#l_unit").value && it.kind === "conso") $("#l_unit").value = it.unit || "";
+    if (!$("#l_qty").value && it.kind === "outil") $("#l_qty").value = "1";
+  });
+  $("#lineForm").onsubmit = async e => {
+    e.preventDefault();
+    const label = $("#l_label").value.trim(); if (!label){ $("#l_label").focus(); return; }
+    const it = itemByName(label);
+    const line = {label: it ? it.name : label, qty: $("#l_qty").value.trim(), unit: $("#l_unit").value.trim(), type: S.lineType, itemId: it ? it.id : ""};
+    ["l_label","l_qty","l_unit"].forEach(id => $("#" + id).value = "");
+    $("#l_label").focus();
+    if (!(await api("lineAdd", {siteId: st.id, line}))){ $("#l_label").value = line.label; $("#l_qty").value = line.qty; $("#l_unit").value = line.unit; }
+  };
+  $("#viewSites").querySelectorAll(".line").forEach(row => {
+    const l = S.lines.find(x => x.id === row.dataset.line); if (!l) return;
+    row.querySelector("[data-act=tog]").onclick = () => {
+      const ready = !l.ready;
+      l.ready = ready; l.readyBy = ready ? S.by : ""; render();   // bascule tout de suite, confirmée par le serveur
+      api("lineToggle", {id: l.id, ready});
+    };
+    row.querySelector("[data-act=editl]").onclick = () => openLine(l);
+  });
+  const c = $("#copySite"); if (c) c.onclick = () => {
+    const ls = siteLines(st.id);
+    let t = `À prendre – ${st.name}${st.info ? " (" + st.info + ")" : ""}\n`;
+    LTYPES.forEach(([k, lab]) => { const g = ls.filter(l => l.type === k); if (!g.length) return; t += `\n${lab} :\n`; g.forEach(l => t += `${l.ready ? "✓" : "☐"} ${l.label}${l.qty || l.unit ? " – " + [l.qty, l.unit].filter(Boolean).join(" ") : ""}\n`); });
+    copyText(t.trim());
+  };
+  const r = $("#resetSite"); if (r) r.onclick = async () => {
+    if (!r.classList.contains("armed")){ r.classList.add("armed","danger"); r.textContent = "Confirmer : tout décocher"; return; }
+    r.disabled = true; if (await api("siteReset", {id: st.id})) toast("Liste prête pour la prochaine fois");
+  };
+}
+function copyText(t){
+  const fallback = () => {
+    const slot = $("#copySlot"); if (!slot) return;
+    slot.innerHTML = `<textarea class="copy-box" id="copyBox" readonly></textarea><p class="hint">Sélectionne le texte et copie-le.</p>`;
+    const box = $("#copyBox"); box.value = t; box.focus(); box.select();
+  };
+  try { navigator.clipboard.writeText(t).then(() => toast("Liste copiée"), fallback); } catch(e){ fallback(); }
+}
+
+function openSite(st){
+  const d = st || {name:"", info:"", note:"", done:false};
+  const sh = openSheet(`<h3>${st ? "Modifier le chantier" : "Nouveau chantier"}</h3>
+    <form class="form" id="siteForm" novalidate>
+      <div class="field"><label for="c_name">Nom du chantier</label><input id="c_name" maxlength="80" value="${esc(d.name)}" placeholder="ex. Martin – réfection toiture"></div>
+      <div class="field"><label for="c_info">Adresse ou client</label><input id="c_info" maxlength="120" value="${esc(d.info)}" placeholder="ex. 12 rue du Lac, Annecy"></div>
+      <div class="field"><label for="c_note">Note</label><textarea id="c_note" maxlength="300" placeholder="Accès, code portail, type de couverture…">${esc(d.note)}</textarea></div>
+      ${st ? `<div class="field"><span class="lbl">État</span><div class="kind" id="c_done"><button type="button" data-d="0" aria-pressed="${!d.done}">En cours</button><button type="button" data-d="1" aria-pressed="${!!d.done}">Terminé</button></div></div>` : ""}
+      <div class="actions"><button type="submit" class="btn primary grow">${st ? "Enregistrer" : "Créer"}</button><button type="button" class="btn" id="siteCancel">Annuler</button>${st ? `<button type="button" class="btn danger" id="siteDel">Supprimer</button>` : ""}</div>
+    </form>`);
+  let done = !!d.done;
+  const cd = $("#c_done"); if (cd) cd.onclick = e => { const b = e.target.closest("button"); if (!b) return; done = b.dataset.d === "1"; cd.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); };
+  $("#siteCancel").onclick = closeSheet;
+  if (!st) setTimeout(() => $("#c_name").focus(), 50);
+  const del = $("#siteDel"); if (del) del.onclick = async () => {
+    if (!del.classList.contains("armed")){ del.classList.add("armed"); del.textContent = "Confirmer : supprimer le chantier et sa liste"; return; }
+    del.disabled = true;
+    if (await api("siteDelete", {id: st.id})){ S.siteId = ""; closeSheet(); toast("Chantier supprimé"); render(); } else del.disabled = false;
+  };
+  $("#siteForm").onsubmit = async e => {
+    e.preventDefault();
+    const name = $("#c_name").value.trim(); if (!name){ $("#c_name").focus(); toast("Donne un nom au chantier"); return; }
+    const site = {id: st ? st.id : "", name, info: $("#c_info").value.trim(), note: $("#c_note").value.trim(), done};
+    const btn = sh.querySelector("button[type=submit]"); btn.disabled = true;
+    const before = new Set(S.sites.map(x => x.id));
+    if (await api("siteSave", {site})){
+      closeSheet(); toast(st ? "Enregistré" : "Chantier créé");
+      if (!st){ const nw = S.sites.find(x => !before.has(x.id)); if (nw){ S.siteId = nw.id; render(); setTimeout(() => { const el = $("#l_label"); if (el) el.focus(); }, 50); } }
+    } else btn.disabled = false;
+  };
+}
+function openLine(l){
+  const sh = openSheet(`<h3>Modifier la ligne</h3>
+    <form class="form" id="lineEdit" novalidate>
+      <div class="field"><label for="e_label">À prendre</label><input id="e_label" maxlength="100" value="${esc(l.label)}"></div>
+      <div class="grid3">
+        <div class="field"><label for="e_qty">Quantité</label><input id="e_qty" maxlength="12" inputmode="decimal" value="${esc(l.qty)}"></div>
+        <div class="field"><label for="e_unit">Unité</label><input id="e_unit" maxlength="20" value="${esc(l.unit)}"></div>
+        <div class="field"><label for="e_type">Type</label><select id="e_type">${LTYPES.map(([k,lab]) => `<option value="${k}" ${l.type===k?"selected":""}>${lab}</option>`).join("")}</select></div>
+      </div>
+      <div class="actions"><button type="submit" class="btn primary grow">Enregistrer</button><button type="button" class="btn" id="leCancel">Annuler</button><button type="button" class="btn danger" id="leDel">Retirer</button></div>
+    </form>`);
+  $("#leCancel").onclick = closeSheet;
+  $("#leDel").onclick = async () => { $("#leDel").disabled = true; if (await api("lineDelete", {id: l.id})){ closeSheet(); toast("Ligne retirée"); } else $("#leDel").disabled = false; };
+  $("#lineEdit").onsubmit = async e => {
+    e.preventDefault();
+    const label = $("#e_label").value.trim(); if (!label){ $("#e_label").focus(); return; }
+    const it = itemByName(label);
+    const line = {id: l.id, label, qty: $("#e_qty").value.trim(), unit: $("#e_unit").value.trim(), type: $("#e_type").value, itemId: it ? it.id : ""};
+    sh.querySelector("button[type=submit]").disabled = true;
+    if (await api("lineSave", {line})){ closeSheet(); toast("Enregistré"); } else sh.querySelector("button[type=submit]").disabled = false;
+  };
+}
+
 /* ---------- Prénom, code d'équipe, réglages ---------- */
 function askName(then){
   const sh = openSheet(`<h3>Bienvenue</h3>
@@ -877,7 +1154,7 @@ $("#summary").addEventListener("click", e => {
   else if (g === "stock"){ const v = isListView() ? S.view : "stock"; setView(v); S.cat = ""; render(); }
   else setView(g);
 });
-document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => setView(b.dataset.view)));
+document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => { if (b.dataset.view === "sites") S.siteId = ""; setView(b.dataset.view); }));
 $("#fab").onclick = () => openEdit(null);
 $("#btnSettings").onclick = openSettings;
 window.addEventListener("pagehide", () => Object.keys(S.pending).forEach(flushQty));
@@ -886,7 +1163,7 @@ window.addEventListener("pagehide", () => Object.keys(S.pending).forEach(flushQt
 function start(){
   try {
     const c = JSON.parse(localStorage.getItem("stockcamion.cache") || "null");
-    if (c && Array.isArray(c.items)){ S.items = c.items; S.log = c.log || []; S.config = c.config || {}; S.loaded = true; S.stale = true; S.lastSync = c.at || 0; }
+    if (c && Array.isArray(c.items)){ S.items = c.items; S.sites = c.sites || []; S.lines = c.lines || []; S.log = c.log || []; S.config = c.config || {}; S.loaded = true; S.stale = true; S.lastSync = c.at || 0; }
   } catch(e){}
   render(); setSync();
   refresh(true);
