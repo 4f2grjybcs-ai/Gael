@@ -1,0 +1,808 @@
+<title>Stock Camion</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<style>
+/* Layout : outil mobile d'abord. En-tête collant, bandeau résumé, liste groupée façon fiche d'atelier, barre d'onglets en bas. Palette zinc + cuivre (gouttières). */
+:root{
+  --bg:#eceff1; --surface:#ffffff; --sunk:#e1e6e9; --fg:#1a2127; --muted:#566570; --line:#d3dade;
+  --accent:#a3561f; --accent-soft:#f4e4d7; --on-accent:#ffffff;
+  --ok:#2b7549; --ok-soft:#dbeee2; --warn:#8f620e; --warn-soft:#f5e9cb; --bad:#ad3329; --bad-soft:#f7dddA; --info:#2a5c87; --info-soft:#dae6f2;
+  --scrim:rgba(16,22,28,.45); --shadow:0 10px 30px rgba(20,30,40,.18);
+  --f-display:"Barlow Condensed","Arial Narrow","Roboto Condensed",sans-serif;
+  --f-body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#11161a; --surface:#1a2127; --sunk:#232b32; --fg:#e6ebee; --muted:#93a2ac; --line:#2c363e;
+  --accent:#e28c52; --accent-soft:#3a2a1f; --on-accent:#1a1009;
+  --ok:#62c48d; --ok-soft:#1d3427; --warn:#e2b14c; --warn-soft:#3a3019; --bad:#f06c61; --bad-soft:#3d2221; --info:#7fb2e0; --info-soft:#1d2d3c;
+  --scrim:rgba(0,0,0,.6); --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#11161a; --surface:#1a2127; --sunk:#232b32; --fg:#e6ebee; --muted:#93a2ac; --line:#2c363e;
+  --accent:#e28c52; --accent-soft:#3a2a1f; --on-accent:#1a1009;
+  --ok:#62c48d; --ok-soft:#1d3427; --warn:#e2b14c; --warn-soft:#3a3019; --bad:#f06c61; --bad-soft:#3d2221; --info:#7fb2e0; --info-soft:#1d2d3c;
+  --scrim:rgba(0,0,0,.6); --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.4;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* En-tête */
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+header.top .wrap{display:flex;align-items:center;gap:12px;padding-block:10px}
+.brand{flex:1;min-width:0}
+.brand h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1;letter-spacing:.01em;text-transform:uppercase}
+.brand .sub{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
+.icon-btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;width:42px;height:42px;display:grid;place-items:center;flex:none}
+.icon-btn svg{width:20px;height:20px}
+
+/* Résumé */
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-block:14px 4px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;text-align:left;min-width:0}
+button.stat{cursor:pointer}
+.stat b{display:block;font-family:var(--f-display);font-size:30px;line-height:1;font-variant-numeric:tabular-nums}
+.stat span{display:block;font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.2}
+.stat.alert b{color:var(--bad)} .stat.out b{color:var(--info)}
+
+/* Filtres */
+.tools{display:flex;flex-direction:column;gap:10px;padding-block:12px 6px}
+.search{position:relative}
+.search input{width:100%;height:46px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);padding:0 14px 0 40px}
+.search svg{position:absolute;left:12px;top:13px;width:20px;height:20px;color:var(--muted)}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -2px;padding:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:14px;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.groupby{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:5px 10px;font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--sunk);font-weight:600;color:var(--fg)}
+
+/* Liste */
+main{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
+.group{margin-top:16px}
+.group h2{display:flex;justify-content:space-between;align-items:baseline;margin:0 2px 6px;font-family:var(--f-display);font-weight:600;font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.group h2 small{font-family:var(--f-body);font-size:12px;letter-spacing:0;text-transform:none}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.row{display:flex;align-items:center;gap:10px;padding:8px 10px 8px 0;border-top:1px solid var(--line);min-height:62px}
+.row:first-child{border-top:0}
+.row-main{flex:1;min-width:0;border:0;background:none;text-align:left;padding:4px 0 4px 14px;display:flex;flex-direction:column;gap:2px}
+.row-main .name{font-weight:600;font-size:16px;line-height:1.25;overflow-wrap:anywhere}
+.row-main .meta{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.row-main .meta .flag{color:var(--bad);font-weight:600}
+.stepper{display:flex;align-items:center;gap:2px;flex:none}
+.stepper button{width:40px;height:40px;border-radius:8px;border:1px solid var(--line);background:var(--sunk);font-size:22px;line-height:1;display:grid;place-items:center}
+.stepper .q{min-width:52px;text-align:center;font-variant-numeric:tabular-nums;line-height:1.05}
+.stepper .q b{display:block;font-family:var(--f-display);font-size:24px}
+.stepper .q small{display:block;font-size:11px;color:var(--muted)}
+.stepper.low .q b{color:var(--bad)}
+.pill{flex:none;border:0;border-radius:999px;padding:7px 12px;font-size:13px;font-weight:600;white-space:nowrap;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.info{background:var(--info-soft);color:var(--info)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.bad{background:var(--bad-soft);color:var(--bad)}
+.ro .stepper button{display:none}
+
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:var(--r);padding:22px 18px;margin-top:18px;display:flex;flex-direction:column;gap:12px}
+.empty h3{margin:0;font-family:var(--f-display);font-size:22px;font-weight:700;text-wrap:balance}
+.empty p{margin:0;color:var(--muted);max-width:60ch}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--r);padding:11px 16px;font-weight:600;font-size:15px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.danger.armed{background:var(--bad);color:var(--surface)}
+.btn:disabled{opacity:.55;cursor:default}
+
+/* Historique */
+.log-day{margin-top:16px}
+.log-row{display:flex;gap:12px;padding:10px 14px;border-top:1px solid var(--line);font-size:15px}
+.log-row:first-child{border-top:0}
+.log-row time{flex:none;width:44px;color:var(--muted);font-variant-numeric:tabular-nums;font-size:13px;padding-top:2px}
+.log-row div{min-width:0;overflow-wrap:anywhere}
+.log-row .who{color:var(--muted);font-size:13px}
+
+/* Achats */
+.buy-row{display:flex;justify-content:space-between;gap:12px;padding:12px 14px;border-top:1px solid var(--line);align-items:center}
+.buy-row:first-child{border-top:0}
+.buy-row .l{min-width:0}
+.buy-row .l b{display:block;overflow-wrap:anywhere}
+.buy-row .l span{font-size:13px;color:var(--muted)}
+.buy-row .r{flex:none;text-align:right;font-variant-numeric:tabular-nums;font-size:14px}
+.buy-row .r b{font-family:var(--f-display);font-size:22px;display:block;line-height:1}
+.copy-box{width:100%;min-height:120px;margin-top:10px;border-radius:var(--r);border:1px solid var(--line);background:var(--surface);padding:10px}
+
+/* Barre du bas */
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav.tabs .wrap{display:grid;grid-template-columns:repeat(3,1fr)}
+nav.tabs button{border:0;background:none;padding:8px 4px 9px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12.5px;color:var(--muted);position:relative}
+nav.tabs button svg{width:22px;height:22px}
+nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:600}
+.badge{position:absolute;top:4px;left:calc(50% + 6px);background:var(--bad);color:#fff;border-radius:999px;font-size:11px;font-weight:700;min-width:18px;height:18px;line-height:18px;padding:0 5px}
+.fab{position:fixed;z-index:21;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(74px + env(safe-area-inset-bottom,0px));border:0;border-radius:999px;background:var(--accent);color:var(--on-accent);padding:14px 20px 14px 16px;font-weight:600;font-size:16px;display:flex;align-items:center;gap:6px;box-shadow:var(--shadow)}
+.fab svg{width:22px;height:22px}
+
+/* Feuille (modale) */
+.scrim{position:fixed;inset:0;z-index:40;background:var(--scrim);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--surface);width:100%;max-width:560px;max-height:92%;overflow-y:auto;border-radius:16px 16px 0 0;padding:18px max(18px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(18px,env(safe-area-inset-left,0px));box-shadow:var(--shadow)}
+@media (min-width:640px){.scrim{align-items:center}.sheet{border-radius:16px}}
+.sheet h3{margin:0 0 14px;font-family:var(--f-display);font-size:24px;font-weight:700;text-wrap:balance}
+.form{display:flex;flex-direction:column;gap:12px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label,.field .lbl{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.field input,.field select,.field textarea{height:46px;border-radius:8px;border:1px solid var(--line);background:var(--bg);padding:0 12px;width:100%}
+.field textarea{height:72px;padding:10px 12px;resize:vertical}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.kind{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.kind button{border:0;background:var(--bg);padding:11px 6px;font-weight:600;font-size:14px}
+.kind button[aria-pressed="true"]{background:var(--fg);color:var(--bg)}
+.status-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.status-opts button{border:2px solid transparent;border-radius:10px;padding:12px 8px;font-weight:600;font-size:15px}
+.status-opts button[aria-pressed="true"]{border-color:currentColor}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.sheet .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.sheet .actions .grow{flex:1}
+
+.banner{margin-top:12px;border-radius:var(--r);padding:10px 14px;font-size:14px;background:var(--warn-soft);color:var(--fg);border:1px solid var(--line)}
+.banner button{border:0;background:none;color:var(--accent);font-weight:600;padding:0;text-decoration:underline}
+.toast{position:fixed;z-index:50;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);border-radius:999px;padding:10px 18px;font-size:14px;max-width:calc(100% - 32px);text-align:center;box-shadow:var(--shadow)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
+@media (max-width:380px){.stat b{font-size:26px}.row-main .name{font-size:15px}}
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1 id="vehName">Stock Camion</h1>
+      <div class="sub"><span class="dot" id="syncDot"></span><span id="syncTxt">Connexion…</span></div>
+    </div>
+    <button class="icon-btn" id="btnSettings" aria-label="Réglages">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <div id="bannerSlot"></div>
+  <div class="summary" id="summary">
+    <div class="stat"><b>–</b><span>articles</span></div>
+    <div class="stat"><b>–</b><span>à racheter</span></div>
+    <div class="stat"><b>–</b><span>outils sortis</span></div>
+  </div>
+
+  <section id="viewStock">
+    <div class="tools">
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <label class="sr" for="q">Rechercher</label>
+        <input id="q" type="search" placeholder="Chercher : cisaille, harnais, mastic…" autocomplete="off">
+      </div>
+      <div class="chips" id="chips"></div>
+      <div class="groupby">Ranger par
+        <div class="seg" id="groupSeg">
+          <button data-g="cat" aria-pressed="true">Catégorie</button>
+          <button data-g="loc" aria-pressed="false">Emplacement</button>
+          <button data-g="status" aria-pressed="false">Statut</button>
+        </div>
+      </div>
+    </div>
+    <div id="list"><div class="empty"><h3>Chargement du stock…</h3><p>Les outils et consommables du camion s'affichent ici dès que la connexion répond.</p></div></div>
+  </section>
+
+  <section id="viewBuy" hidden></section>
+  <section id="viewLog" hidden></section>
+</main>
+
+<button class="fab" id="fab" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Ajouter
+</button>
+
+<nav class="tabs" aria-label="Sections">
+  <div class="wrap">
+    <button data-view="stock" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7h11v10H3zM14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg>Stock
+    </button>
+    <button data-view="buy">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h11M9 12h11M9 19h11"/><path d="m3 5 1.5 1.5L7 4M3 12l1.5 1.5L7 11M3 19l1.5 1.5L7 18"/></svg>À racheter<span class="badge" id="buyBadge" hidden>0</span>
+    </button>
+    <button data-view="log">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Historique
+    </button>
+  </div>
+</nav>
+
+<script>
+(function(){
+"use strict";
+
+const STATUS = {
+  camion:   {l:"Dans le camion", c:"ok"},
+  chantier: {l:"Sur chantier",   c:"info"},
+  atelier:  {l:"En réparation",  c:"warn"},
+  manquant: {l:"Manquant",       c:"bad"}
+};
+const CATS = ["Électroportatif","Outillage à main","Zinguerie","Fixations & visserie","Étanchéité","Sécurité & EPI","Accès & levage","Divers"];
+const LOCS = ["Cabine","Coffre gauche","Coffre droit","Étagères du fond","Galerie de toit","Remorque"];
+
+// Liste type d'un camion de couvreur, chargée seulement si l'équipe le demande.
+// [nom, type, catégorie, emplacement, quantité, unité, seuil mini]
+const TEMPLATE = [
+  ["Visseuse-perceuse 18V","outil","Électroportatif","Coffre gauche",1,"",0],
+  ["Perforateur SDS+","outil","Électroportatif","Coffre gauche",1,"",0],
+  ["Meuleuse Ø125","outil","Électroportatif","Coffre gauche",1,"",0],
+  ["Scie sabre","outil","Électroportatif","Coffre gauche",1,"",0],
+  ["Cloueur de toiture","outil","Électroportatif","Étagères du fond",1,"",0],
+  ["Batteries 18V","conso","Électroportatif","Cabine",4,"u",3],
+  ["Chargeur batteries","outil","Électroportatif","Cabine",1,"",0],
+  ["Rallonge 25 m","outil","Électroportatif","Étagères du fond",1,"",0],
+  ["Marteau de couvreur","outil","Outillage à main","Coffre droit",1,"",0],
+  ["Enclume + tranche à ardoise","outil","Outillage à main","Coffre droit",1,"",0],
+  ["Tire-clou","outil","Outillage à main","Coffre droit",1,"",0],
+  ["Cordeau traceur","outil","Outillage à main","Coffre droit",1,"",0],
+  ["Niveau 1 m","outil","Outillage à main","Étagères du fond",1,"",0],
+  ["Mètre ruban 5 m","conso","Outillage à main","Cabine",3,"u",2],
+  ["Cisaille à zinc droite","outil","Zinguerie","Coffre droit",1,"",0],
+  ["Pince à border","outil","Zinguerie","Coffre droit",1,"",0],
+  ["Fer à souder + lampe","outil","Zinguerie","Étagères du fond",1,"",0],
+  ["Étain à souder","conso","Zinguerie","Étagères du fond",6,"baguettes",3],
+  ["Décapant zinc","conso","Zinguerie","Étagères du fond",1,"flacon",1],
+  ["Bouteille propane","conso","Zinguerie","Étagères du fond",1,"bouteille",1],
+  ["Crochets inox ardoise","conso","Fixations & visserie","Étagères du fond",3,"boîtes",1],
+  ["Pointes cuivre","conso","Fixations & visserie","Étagères du fond",2,"boîtes",1],
+  ["Vis de toiture 6,5×80","conso","Fixations & visserie","Étagères du fond",2,"boîtes",1],
+  ["Clous de couverture","conso","Fixations & visserie","Étagères du fond",3,"kg",1],
+  ["Rivets alu","conso","Fixations & visserie","Étagères du fond",1,"boîte",1],
+  ["Mastic PU","conso","Étanchéité","Étagères du fond",6,"cartouches",3],
+  ["Bande d'étanchéité alu","conso","Étanchéité","Étagères du fond",2,"rouleaux",1],
+  ["Écran sous-toiture","conso","Étanchéité","Galerie de toit",1,"rouleau",1],
+  ["Mousse expansive","conso","Étanchéité","Étagères du fond",2,"bombes",1],
+  ["Harnais antichute","conso","Sécurité & EPI","Cabine",3,"u",3],
+  ["Longe + absorbeur","conso","Sécurité & EPI","Cabine",3,"u",3],
+  ["Ligne de vie temporaire","outil","Sécurité & EPI","Coffre gauche",1,"",0],
+  ["Casques","conso","Sécurité & EPI","Cabine",4,"u",3],
+  ["Gants de manutention","conso","Sécurité & EPI","Cabine",6,"paires",4],
+  ["Lunettes de protection","conso","Sécurité & EPI","Cabine",4,"u",2],
+  ["Échelle coulissante 2×12","outil","Accès & levage","Galerie de toit",1,"",0],
+  ["Crochets d'échelle de toit","outil","Accès & levage","Galerie de toit",1,"",0],
+  ["Monte-matériaux","outil","Accès & levage","Remorque",1,"",0]
+];
+
+const S = {
+  db:null, user:null, uid:null, canWrite:true, readOnlyReason:"",
+  items:[], log:[], members:{}, config:{}, names:{},
+  loaded:{items:false, log:false}, stale:false, failed:false,
+  view:"stock", q:"", cat:"", group:"cat",
+  pending:{}
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const norm = s => String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+const fr = (a,b) => a.localeCompare(b,"fr",{sensitivity:"base"});
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+try { const g = localStorage.getItem("stockcamion.group"); if (g) S.group = g; } catch(e){}
+
+/* ---------- Calculs ---------- */
+function qtyOf(it){ const p = S.pending[it.id]; return p ? p.qty : (Number(it.qty)||0); }
+function isLow(it){
+  if (it.kind !== "conso") return false;
+  const q = qtyOf(it), m = Number(it.min)||0;
+  return m > 0 ? q <= m : q <= 0;
+}
+function needsTool(it){ return it.kind === "outil" && (it.status === "manquant" || it.status === "atelier"); }
+function isOut(it){ return it.kind === "outil" && it.status === "chantier"; }
+function whoName(id){
+  if (!id) return "Quelqu'un";
+  const nick = S.members[id] && S.members[id].nick;
+  if (id === S.uid) return nick ? nick + " (toi)" : "Toi";
+  return nick || S.names[id] || "Quelqu'un";
+}
+
+/* ---------- Rendu ---------- */
+function render(){
+  renderSummary(); renderBanner();
+  if (S.view === "stock") renderStock();
+  if (S.view === "buy") renderBuy();
+  if (S.view === "log") renderLog();
+  const n = S.items.filter(it => isLow(it) || needsTool(it)).length;
+  const b = $("#buyBadge"); b.hidden = !n; b.textContent = n;
+  $("#fab").hidden = !(S.view === "stock" && S.canWrite && S.db && anyLoaded());
+  document.body.classList.toggle("ro", !S.canWrite);
+  $("#vehName").textContent = (S.config.vehicle || "Stock Camion");
+}
+function anyLoaded(){ return S.loaded.items; }
+
+function renderSummary(){
+  if (!S.loaded.items) return;
+  const total = S.items.length;
+  const buy = S.items.filter(it => isLow(it) || needsTool(it)).length;
+  const out = S.items.filter(isOut).length;
+  $("#summary").innerHTML =
+    `<button class="stat" data-goto="stock"><b>${total}</b><span>article${total>1?"s":""} au total</span></button>
+     <button class="stat ${buy?"alert":""}" data-goto="buy"><b>${buy}</b><span>à racheter ou réparer</span></button>
+     <button class="stat ${out?"out":""}" data-goto="out"><b>${out}</b><span>outil${out>1?"s":""} sur chantier</span></button>`;
+}
+
+function renderBanner(){
+  let h = "";
+  if (S.failed) h = `<div class="banner">Le stock partagé n'est pas joignable sur cette page. Ouvre-la depuis le lien claude.ai envoyé par l'équipe, connecté à ton compte.</div>`;
+  else if (!S.canWrite && S.db) h = `<div class="banner">Lecture seule : tu peux consulter le stock mais pas le modifier. ${esc(S.readOnlyReason)}</div>`;
+  else if (S.db && S.uid && S.loaded.items && !(S.members[S.uid] && S.members[S.uid].nick) && !S.names[S.uid])
+    h = `<div class="banner">Indique ton prénom pour que l'équipe sache qui a sorti quoi. <button id="askNick">Ajouter mon prénom</button></div>`;
+  $("#bannerSlot").innerHTML = h;
+  const a = $("#askNick"); if (a) a.onclick = openSettings;
+}
+
+function renderChips(){
+  const used = [...new Set(S.items.map(i => i.cat || "Divers"))];
+  const cats = CATS.filter(c => used.includes(c)).concat(used.filter(c => !CATS.includes(c)).sort(fr));
+  const all = [["", "Tout"], ["__out", "Sortis"], ...cats.map(c => [c, c])];
+  $("#chips").innerHTML = all.map(([v,l]) => `<button class="chip" data-cat="${esc(v)}" aria-pressed="${S.cat===v}">${esc(l)}</button>`).join("");
+}
+
+function rowHTML(it){
+  const loc = it.loc || "Sans emplacement";
+  let meta = esc(loc);
+  if (S.group === "loc") meta = esc(it.cat || "Divers");
+  let side = "";
+  if (it.kind === "conso"){
+    const q = qtyOf(it), low = isLow(it);
+    meta += it.min ? ` · mini ${esc(it.min)}` : "";
+    if (low) meta += ` · <span class="flag">à racheter</span>`;
+    side = `<div class="stepper ${low?"low":""}">
+      <button data-act="dec" aria-label="Retirer 1 ${esc(it.name)}">−</button>
+      <div class="q"><b>${q}</b><small>${esc(it.unit||"u")}</small></div>
+      <button data-act="inc" aria-label="Ajouter 1 ${esc(it.name)}">+</button></div>`;
+  } else {
+    const st = STATUS[it.status] || STATUS.camion;
+    if (it.status && it.status !== "camion" && it.holder) meta += ` · ${esc(it.holder)}`;
+    if ((Number(it.qty)||1) > 1) meta += ` · ×${esc(it.qty)}`;
+    side = `<button class="pill ${st.c}" data-act="status" ${S.canWrite?"":"disabled"}>${st.l}</button>`;
+  }
+  return `<div class="row" data-id="${esc(it.id)}">
+    <button class="row-main" data-act="edit"><span class="name">${esc(it.name)}</span><span class="meta">${meta}</span></button>${side}</div>`;
+}
+
+function renderStock(){
+  const list = $("#list");
+  if (!S.loaded.items){
+    if (S.failed || S.stale) list.innerHTML = `<div class="empty"><h3>Stock injoignable pour l'instant</h3><p>La connexion ne répond pas. Vérifie le réseau : la liste s'affichera dès qu'elle revient.</p></div>`;
+    return;
+  }
+  renderChips();
+  if (!S.items.length){
+    list.innerHTML = `<div class="empty">
+      <h3>Le camion est encore vide</h3>
+      <p>Ajoute les outils et consommables un par un, ou pars d'une liste type de couvreur (électroportatif, zinguerie, fixations, EPI, échelles…) que tu ajusteras ensuite.</p>
+      ${S.canWrite ? `<div class="btns"><button class="btn primary" id="tplBtn">Charger la liste type (${TEMPLATE.length} articles)</button><button class="btn" id="addFirst">Ajouter un article</button></div>` : ""}
+    </div>`;
+    const t = $("#tplBtn"); if (t) t.onclick = loadTemplate;
+    const a = $("#addFirst"); if (a) a.onclick = () => openEdit(null);
+    return;
+  }
+  const qn = norm(S.q);
+  let items = S.items.filter(it => {
+    if (S.cat === "__out") { if (!(it.kind === "outil" && it.status && it.status !== "camion")) return false; }
+    else if (S.cat && (it.cat || "Divers") !== S.cat) return false;
+    if (!qn) return true;
+    return norm([it.name, it.loc, it.cat, it.note, it.holder].join(" ")).includes(qn);
+  });
+  if (!items.length){
+    list.innerHTML = `<div class="empty"><h3>Rien ne correspond</h3><p>Aucun article pour « ${esc(S.q || S.cat)} ». Essaie un autre mot ou retire le filtre.</p></div>`;
+    return;
+  }
+  const keyOf = it => S.group === "loc" ? (it.loc || "Sans emplacement")
+                   : S.group === "status" ? (it.kind === "conso" ? (isLow(it) ? "Consommables à racheter" : "Consommables en stock") : (STATUS[it.status]||STATUS.camion).l)
+                   : (it.cat || "Divers");
+  const order = S.group === "loc" ? LOCS : S.group === "status" ? ["Manquant","En réparation","Sur chantier","Consommables à racheter","Dans le camion","Consommables en stock"] : CATS;
+  const groups = {};
+  items.forEach(it => (groups[keyOf(it)] ||= []).push(it));
+  const keys = Object.keys(groups).sort((a,b) => {
+    const ia = order.indexOf(a), ib = order.indexOf(b);
+    return (ia<0?99:ia) - (ib<0?99:ib) || fr(a,b);
+  });
+  list.innerHTML = keys.map(k => {
+    const g = groups[k].sort((a,b) => fr(a.name,b.name));
+    return `<div class="group"><h2>${esc(k)} <small>${g.length}</small></h2><div class="panel">${g.map(rowHTML).join("")}</div></div>`;
+  }).join("");
+}
+
+function buyLines(){
+  const low = S.items.filter(isLow).sort((a,b) => fr(a.name,b.name));
+  const tools = S.items.filter(needsTool).sort((a,b) => fr(a.name,b.name));
+  return {low, tools};
+}
+function suggestQty(it){ const m = Number(it.min)||1, q = qtyOf(it); return Math.max(1, m*2 - q); }
+
+function renderBuy(){
+  const v = $("#viewBuy");
+  if (!S.loaded.items){ v.innerHTML = `<div class="empty"><h3>Chargement…</h3></div>`; return; }
+  const {low, tools} = buyLines();
+  if (!low.length && !tools.length){
+    v.innerHTML = `<div class="empty"><h3>Rien à racheter</h3><p>Tous les consommables sont au-dessus de leur seuil mini et aucun outil n'est manquant ou en réparation. Un article apparaît ici dès qu'il passe sous son seuil.</p></div>`;
+    return;
+  }
+  let h = "";
+  if (low.length) h += `<div class="group"><h2>Consommables sous le seuil <small>${low.length}</small></h2><div class="panel">${
+    low.map(it => `<div class="buy-row" data-id="${esc(it.id)}"><div class="l"><b>${esc(it.name)}</b><span>Reste ${qtyOf(it)} ${esc(it.unit||"u")} · mini ${esc(it.min||0)} · ${esc(it.loc||"")}</span></div><div class="r"><b>+${suggestQty(it)}</b>conseillé</div></div>`).join("")
+  }</div></div>`;
+  if (tools.length) h += `<div class="group"><h2>Outils à remplacer ou récupérer <small>${tools.length}</small></h2><div class="panel">${
+    tools.map(it => `<div class="buy-row" data-id="${esc(it.id)}"><div class="l"><b>${esc(it.name)}</b><span>${esc(it.holder || it.loc || "")}</span></div><div class="r"><span class="pill ${STATUS[it.status].c}">${STATUS[it.status].l}</span></div></div>`).join("")
+  }</div></div>`;
+  h += `<div class="btns" style="margin-top:16px"><button class="btn primary" id="copyList">Copier la liste</button></div>
+        <p class="hint" style="margin-top:8px">Pour l'envoyer par SMS ou WhatsApp au fournisseur ou au patron.</p><div id="copySlot"></div>`;
+  v.innerHTML = h;
+  $("#copyList").onclick = copyList;
+}
+function listText(){
+  const {low, tools} = buyLines();
+  const veh = S.config.vehicle || "camion";
+  let t = `À racheter – ${veh} (${new Date().toLocaleDateString("fr-FR")})\n`;
+  low.forEach(it => t += `- ${it.name} : +${suggestQty(it)} ${it.unit||""} (reste ${qtyOf(it)})\n`);
+  if (tools.length){ t += `\nOutils :\n`; tools.forEach(it => t += `- ${it.name} : ${STATUS[it.status].l.toLowerCase()}${it.holder?" ("+it.holder+")":""}\n`); }
+  return t.trim();
+}
+function copyList(){
+  const t = listText();
+  const fallback = () => {
+    $("#copySlot").innerHTML = `<textarea class="copy-box" id="copyBox" readonly></textarea><p class="hint">Sélectionne le texte et copie-le.</p>`;
+    const box = $("#copyBox"); box.value = t; box.focus(); box.select();
+  };
+  try { navigator.clipboard.writeText(t).then(() => toast("Liste copiée"), fallback); } catch(e){ fallback(); }
+}
+
+function renderLog(){
+  const v = $("#viewLog");
+  if (!S.loaded.log){ v.innerHTML = `<div class="empty"><h3>Chargement de l'historique…</h3></div>`; return; }
+  if (!S.log.length){ v.innerHTML = `<div class="empty"><h3>Aucun mouvement pour l'instant</h3><p>Chaque sortie d'outil, retour au camion, ajout ou utilisation de consommable s'inscrira ici avec le nom de la personne et l'heure.</p></div>`; return; }
+  const days = {};
+  S.log.forEach(e => {
+    const d = new Date(e.at);
+    const k = d.toLocaleDateString("fr-FR",{weekday:"long", day:"numeric", month:"long"});
+    (days[k] ||= []).push(e);
+  });
+  const today = new Date().toLocaleDateString("fr-FR",{weekday:"long", day:"numeric", month:"long"});
+  const yest = new Date(Date.now()-864e5).toLocaleDateString("fr-FR",{weekday:"long", day:"numeric", month:"long"});
+  v.innerHTML = Object.entries(days).map(([k, es]) => `<div class="log-day group"><h2>${k===today?"Aujourd'hui":k===yest?"Hier":esc(k)}</h2><div class="panel">${
+    es.map(e => `<div class="log-row"><time>${new Date(e.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</time><div><b>${esc(e.item)}</b> ${esc(e.text)}<div class="who">${esc(whoName(e.by))}</div></div></div>`).join("")
+  }</div></div>`).join("") + `<p class="hint" style="margin-top:12px">Les 200 derniers mouvements sont affichés ; ceux de plus de 6 mois sont effacés automatiquement.</p>`;
+}
+
+function setView(v){
+  S.view = v;
+  $("#viewStock").hidden = v !== "stock";
+  $("#viewBuy").hidden = v !== "buy";
+  $("#viewLog").hidden = v !== "log";
+  document.querySelectorAll("nav.tabs button").forEach(b => b.dataset.view === v ? b.setAttribute("aria-current","page") : b.removeAttribute("aria-current"));
+  render();
+  window.scrollTo({top:0});
+}
+
+function setSync(){
+  const dot = $("#syncDot"), t = $("#syncTxt");
+  dot.className = "dot";
+  if (S.failed){ dot.classList.add("bad"); t.textContent = "Non connecté au stock partagé"; }
+  else if (!S.loaded.items && S.stale){ dot.classList.add("warn"); t.textContent = "Connexion lente…"; }
+  else if (!S.loaded.items){ t.textContent = "Connexion…"; }
+  else if (S.stale){ dot.classList.add("warn"); t.textContent = "Hors ligne · peut ne pas être à jour"; }
+  else { dot.classList.add("ok"); t.textContent = S.canWrite ? "À jour · partagé avec l'équipe" : "À jour · lecture seule"; }
+}
+
+/* ---------- Toast & feuilles ---------- */
+let toastT;
+function toast(msg){
+  let el = $(".toast"); if (!el){ el = document.createElement("div"); el.className = "toast"; el.setAttribute("role","status"); document.body.appendChild(el); }
+  el.textContent = msg; el.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => el.hidden = true, 2600);
+}
+function openSheet(html){
+  closeSheet();
+  const s = document.createElement("div");
+  s.className = "scrim"; s.id = "scrim";
+  s.innerHTML = `<div class="sheet" role="dialog" aria-modal="true">${html}</div>`;
+  s.addEventListener("click", e => { if (e.target === s) closeSheet(); });
+  document.body.appendChild(s);
+  return s.firstElementChild;
+}
+function closeSheet(){ const s = $("#scrim"); if (s) s.remove(); }
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+
+/* ---------- Écritures ---------- */
+function handleWriteError(e){
+  const code = e && e.code;
+  if (code === "invalid_argument" || code === "not_granted"){
+    S.canWrite = false;
+    S.readOnlyReason = "Demande à la personne qui a créé l'app de t'inviter comme Éditeur.";
+    toast("Modification refusée : tu es en lecture seule");
+    render(); setSync();
+  } else if (code === "quota_exceeded") toast("Stockage plein : supprime d'anciens articles");
+  else toast("Pas enregistré, réessaie dans un instant");
+}
+async function write(fn){
+  try { await fn(); return true; }
+  catch(e){
+    if (e && e.code === "unavailable"){ await sleep(400 + Math.random()*600); try { await fn(); return true; } catch(e2){ handleWriteError(e2); return false; } }
+    handleWriteError(e); return false;
+  }
+}
+function logAct(item, text){
+  if (!S.db) return;
+  S.db.collection("log").add({at: Date.now(), by: S.uid || null, item: String(item).slice(0,120), text: String(text).slice(0,200)}).catch(()=>{});
+}
+function stamp(){ return {updatedAt: Date.now(), updatedBy: S.uid || null}; }
+
+function bump(id, delta){
+  const it = S.items.find(i => i.id === id); if (!it || !S.canWrite) return;
+  const p = S.pending[id] || (S.pending[id] = {qty: Number(it.qty)||0, from: Number(it.qty)||0, t:null});
+  p.qty = Math.max(0, p.qty + delta);
+  clearTimeout(p.t);
+  p.t = setTimeout(() => flushQty(id), 900);
+  render();
+}
+async function flushQty(id){
+  const p = S.pending[id]; if (!p) return;
+  const it = S.items.find(i => i.id === id);
+  const qty = p.qty, from = p.from;
+  if (qty === from || !it){ delete S.pending[id]; render(); return; }
+  const ok = await write(() => S.db.doc("items/" + id).update({qty, ...stamp()}));
+  delete S.pending[id];
+  if (ok){
+    const d = qty - from, u = it.unit || "u";
+    logAct(it.name, d < 0 ? `: ${-d} ${u} utilisé${-d>1?"s":""} (reste ${qty})` : `: +${d} ${u} ajouté${d>1?"s":""} (total ${qty})`);
+  }
+  render();
+}
+
+/* ---------- Fiche article ---------- */
+function openEdit(id){
+  const it = id ? S.items.find(i => i.id === id) : null;
+  if (it && !S.canWrite){ openView(it); return; }
+  const d = it || {name:"", kind:"outil", cat: (S.cat && S.cat !== "__out") ? S.cat : "", loc:"", qty:1, unit:"", min:0, status:"camion", holder:"", note:""};
+  const cats = [...new Set(CATS.concat(S.items.map(i => i.cat).filter(Boolean)))];
+  const locs = [...new Set(LOCS.concat(S.items.map(i => i.loc).filter(Boolean)))];
+  const sh = openSheet(`
+    <h3>${it ? "Modifier l'article" : "Nouvel article"}</h3>
+    <form class="form" id="editForm" novalidate>
+      <div class="field"><label for="f_name">Nom</label><input id="f_name" required maxlength="80" value="${esc(d.name)}" placeholder="ex. Cisaille à zinc, Mastic PU…"></div>
+      <div class="field"><span class="lbl">Type</span>
+        <div class="kind" id="f_kind"><button type="button" data-k="outil" aria-pressed="${d.kind!=="conso"}">Outil (se sort, se rend)</button><button type="button" data-k="conso" aria-pressed="${d.kind==="conso"}">Consommable (se compte)</button></div></div>
+      <div class="grid2">
+        <div class="field"><label for="f_cat">Catégorie</label><input id="f_cat" list="dl_cat" value="${esc(d.cat)}" placeholder="Zinguerie…"></div>
+        <div class="field"><label for="f_loc">Emplacement</label><input id="f_loc" list="dl_loc" value="${esc(d.loc)}" placeholder="Coffre gauche…"></div>
+      </div>
+      <datalist id="dl_cat">${cats.map(c => `<option value="${esc(c)}">`).join("")}</datalist>
+      <datalist id="dl_loc">${locs.map(c => `<option value="${esc(c)}">`).join("")}</datalist>
+      <div id="consoFields" class="grid3">
+        <div class="field"><label for="f_qty">Quantité</label><input id="f_qty" type="number" inputmode="numeric" min="0" step="1" value="${esc(d.qty ?? 0)}"></div>
+        <div class="field"><label for="f_unit">Unité</label><input id="f_unit" maxlength="20" value="${esc(d.unit)}" placeholder="boîtes"></div>
+        <div class="field"><label for="f_min">Seuil mini</label><input id="f_min" type="number" inputmode="numeric" min="0" step="1" value="${esc(d.min ?? 0)}"></div>
+      </div>
+      <p class="hint" id="consoHint">Sous le seuil mini, l'article passe dans « À racheter ».</p>
+      <div id="toolFields" class="form">
+        <div class="grid2">
+          <div class="field"><label for="f_status">Statut</label><select id="f_status">${Object.entries(STATUS).map(([k,s]) => `<option value="${k}" ${d.status===k?"selected":""}>${s.l}</option>`).join("")}</select></div>
+          <div class="field"><label for="f_tqty">Nombre</label><input id="f_tqty" type="number" inputmode="numeric" min="1" step="1" value="${esc(d.kind==="outil" ? (d.qty||1) : 1)}"></div>
+        </div>
+        <div class="field"><label for="f_holder">Où / qui (si sorti)</label><input id="f_holder" maxlength="80" value="${esc(d.holder)}" placeholder="Chantier Martin, chez Julien…"></div>
+      </div>
+      <div class="field"><label for="f_note">Note</label><textarea id="f_note" maxlength="300" placeholder="N° de série, marque, à recharger…">${esc(d.note)}</textarea></div>
+      <div class="actions">
+        <button type="submit" class="btn primary grow">Enregistrer</button>
+        <button type="button" class="btn" id="cancelBtn">Annuler</button>
+        ${it ? `<button type="button" class="btn danger" id="delBtn">Supprimer</button>` : ""}
+      </div>
+      ${it && it.updatedAt ? `<p class="hint">Modifié le ${new Date(it.updatedAt).toLocaleString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})} par ${esc(whoName(it.updatedBy))}</p>` : ""}
+    </form>`);
+  let kind = d.kind === "conso" ? "conso" : "outil";
+  const syncKind = () => {
+    sh.querySelectorAll("#f_kind button").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === kind));
+    $("#consoFields").hidden = kind !== "conso"; $("#consoHint").hidden = kind !== "conso";
+    $("#toolFields").hidden = kind !== "outil";
+  };
+  syncKind();
+  sh.querySelector("#f_kind").onclick = e => { const b = e.target.closest("button"); if (b){ kind = b.dataset.k; syncKind(); } };
+  $("#cancelBtn").onclick = closeSheet;
+  if (!it) setTimeout(() => $("#f_name").focus(), 50);
+  const del = $("#delBtn");
+  if (del) del.onclick = async () => {
+    if (!del.classList.contains("armed")){ del.classList.add("armed"); del.textContent = "Confirmer la suppression"; return; }
+    del.disabled = true;
+    if (await write(() => S.db.doc("items/" + it.id).delete())){ logAct(it.name, "supprimé du stock"); closeSheet(); toast("Article supprimé"); }
+    else del.disabled = false;
+  };
+  $("#editForm").onsubmit = async e => {
+    e.preventDefault();
+    const name = $("#f_name").value.trim();
+    if (!name){ $("#f_name").focus(); toast("Donne un nom à l'article"); return; }
+    const int = (v, dflt) => { const n = parseInt(v,10); return Number.isFinite(n) && n >= 0 ? n : dflt; };
+    const body = { name, kind, cat: $("#f_cat").value.trim() || "Divers", loc: $("#f_loc").value.trim(), note: $("#f_note").value.trim() };
+    if (kind === "conso"){ Object.assign(body, {qty: int($("#f_qty").value,0), unit: $("#f_unit").value.trim(), min: int($("#f_min").value,0), status:"", holder:""}); }
+    else { const st = $("#f_status").value; Object.assign(body, {qty: Math.max(1,int($("#f_tqty").value,1)), unit:"", min:0, status: st, holder: st === "camion" ? "" : $("#f_holder").value.trim()}); }
+    Object.assign(body, stamp());
+    const btn = e.submitter || sh.querySelector("button[type=submit]"); btn.disabled = true;
+    if (it){
+      if (S.pending[it.id]){ clearTimeout(S.pending[it.id].t); delete S.pending[it.id]; }
+      const ok = await write(() => S.db.doc("items/" + it.id).set((({id, ...rest}) => ({...rest, ...body, createdAt: it.createdAt || Date.now()}))(it)));
+      if (ok){
+        const changes = [];
+        if (kind === "outil" && it.status !== body.status) changes.push(`→ ${STATUS[body.status].l.toLowerCase()}${body.holder?" ("+body.holder+")":""}`);
+        if (kind === "conso" && Number(it.qty) !== body.qty) changes.push(`: stock corrigé à ${body.qty} ${body.unit||"u"}`);
+        logAct(name, changes.length ? changes.join(", ") : "fiche modifiée");
+        closeSheet(); toast("Enregistré");
+      } else btn.disabled = false;
+    } else {
+      body.createdAt = Date.now();
+      const ref = S.db.collection("items").doc();
+      if (await write(() => ref.set(body))){ logAct(name, `ajouté au stock${kind==="conso" ? ` (${body.qty} ${body.unit||"u"})` : ""}`); closeSheet(); toast("Ajouté"); }
+      else btn.disabled = false;
+    }
+  };
+}
+function openView(it){
+  const st = STATUS[it.status] || STATUS.camion;
+  openSheet(`<h3>${esc(it.name)}</h3><div class="form">
+    <p class="hint">${esc(it.cat||"Divers")} · ${esc(it.loc||"Sans emplacement")}</p>
+    ${it.kind==="conso" ? `<p>Stock : <b>${qtyOf(it)} ${esc(it.unit||"u")}</b> · mini ${esc(it.min||0)}</p>` : `<p><span class="pill ${st.c}">${st.l}</span> ${esc(it.holder||"")}</p>`}
+    ${it.note ? `<p>${esc(it.note)}</p>` : ""}
+    <div class="actions"><button class="btn" id="closeV">Fermer</button></div></div>`);
+  $("#closeV").onclick = closeSheet;
+}
+
+/* ---------- Sortie / retour rapide d'un outil ---------- */
+function openStatus(id){
+  const it = S.items.find(i => i.id === id); if (!it || !S.canWrite) return;
+  const cur = it.status || "camion";
+  const sh = openSheet(`<h3>${esc(it.name)}</h3>
+    <div class="form">
+      <div class="status-opts" id="stOpts">${Object.entries(STATUS).map(([k,s]) => `<button type="button" class="pill ${s.c}" data-s="${k}" aria-pressed="${k===cur}">${s.l}</button>`).join("")}</div>
+      <div class="field" id="holderF"><label for="s_holder">Où / qui ?</label><input id="s_holder" maxlength="80" value="${esc(it.holder)}" placeholder="Chantier Martin, chez Julien, SAV…"></div>
+      <div class="actions"><button class="btn primary grow" id="stSave">Valider</button><button class="btn" id="stCancel">Annuler</button></div>
+    </div>`);
+  let sel = cur;
+  const sync = () => { sh.querySelectorAll("#stOpts button").forEach(b => b.setAttribute("aria-pressed", b.dataset.s === sel)); $("#holderF").hidden = sel === "camion"; };
+  sync();
+  $("#stOpts").onclick = e => { const b = e.target.closest("button"); if (!b) return; sel = b.dataset.s; sync(); if (sel !== "camion") $("#s_holder").focus(); };
+  $("#stCancel").onclick = closeSheet;
+  $("#stSave").onclick = async () => {
+    const holder = sel === "camion" ? "" : $("#s_holder").value.trim();
+    if (sel === cur && holder === (it.holder||"")){ closeSheet(); return; }
+    $("#stSave").disabled = true;
+    if (await write(() => S.db.doc("items/" + it.id).update({status: sel, holder, ...stamp()}))){
+      logAct(it.name, sel === "camion" ? "rangé dans le camion" : `→ ${STATUS[sel].l.toLowerCase()}${holder ? " (" + holder + ")" : ""}`);
+      closeSheet(); toast(sel === "camion" ? "Rangé dans le camion" : STATUS[sel].l);
+    } else $("#stSave").disabled = false;
+  };
+}
+
+/* ---------- Réglages ---------- */
+function openSettings(){
+  const mine = (S.uid && S.members[S.uid] && S.members[S.uid].nick) || "";
+  const sh = openSheet(`<h3>Réglages</h3>
+    <form class="form" id="setForm" novalidate>
+      <div class="field"><label for="s_nick">Ton prénom (affiché dans l'historique)</label><input id="s_nick" maxlength="30" value="${esc(mine)}" placeholder="${esc(S.names[S.uid] || "ex. Julien")}" ${S.uid && S.canWrite ? "" : "disabled"}></div>
+      <div class="field"><label for="s_veh">Nom du véhicule</label><input id="s_veh" maxlength="40" value="${esc(S.config.vehicle||"")}" placeholder="ex. Master blanc – AB-123-CD" ${S.canWrite ? "" : "disabled"}></div>
+      <p class="hint">Pour ajouter un collègue : ouvre le menu Partager de cette page sur claude.ai et invite-le par e-mail comme <b>Éditeur</b>. Il pourra alors sortir des outils et décompter les consommables depuis son téléphone.</p>
+      <div class="actions"><button type="submit" class="btn primary grow" ${S.canWrite?"":"disabled"}>Enregistrer</button><button type="button" class="btn" id="setCancel">Fermer</button></div>
+    </form>`);
+  $("#setCancel").onclick = closeSheet;
+  $("#setForm").onsubmit = async e => {
+    e.preventDefault();
+    const nick = $("#s_nick").value.trim(), veh = $("#s_veh").value.trim();
+    let ok = true;
+    if (S.uid && nick !== mine) ok = await write(() => S.db.doc("members/" + S.uid).set({nick, updatedAt: Date.now()}));
+    if (ok && veh !== (S.config.vehicle||"")) ok = await write(() => S.db.doc("config/main").set({...S.config, vehicle: veh}));
+    if (ok){ closeSheet(); toast("Réglages enregistrés"); }
+  };
+}
+
+/* ---------- Liste type ---------- */
+async function loadTemplate(){
+  const btn = $("#tplBtn"); if (!btn || btn.disabled) return;
+  btn.disabled = true;
+  const col = S.db.collection("items");
+  let n = 0;
+  for (const [name, kind, cat, loc, qty, unit, min] of TEMPLATE){
+    btn.textContent = `Ajout… ${n}/${TEMPLATE.length}`;
+    const body = {name, kind, cat, loc, qty, unit, min, status: kind === "outil" ? "camion" : "", holder:"", note:"", createdAt: Date.now(), ...stamp()};
+    const ok = await write(() => col.doc().set(body));
+    if (!ok) break;
+    n++;
+  }
+  if (n) { logAct("Liste type couvreur", `chargée (${n} articles)`); toast(`${n} articles ajoutés : ajuste les quantités`); }
+}
+
+/* ---------- Évènements ---------- */
+$("#list").addEventListener("click", e => {
+  const b = e.target.closest("[data-act]"); if (!b) return;
+  const id = b.closest(".row")?.dataset.id; if (!id) return;
+  const act = b.dataset.act;
+  if (act === "edit") openEdit(id);
+  else if (act === "inc") bump(id, 1);
+  else if (act === "dec") bump(id, -1);
+  else if (act === "status") openStatus(id);
+});
+$("#viewBuy").addEventListener("click", e => { const r = e.target.closest(".buy-row"); if (r) openEdit(r.dataset.id); });
+$("#chips").addEventListener("click", e => { const b = e.target.closest(".chip"); if (!b) return; S.cat = (S.cat === b.dataset.cat ? "" : b.dataset.cat); render(); });
+$("#groupSeg").addEventListener("click", e => {
+  const b = e.target.closest("button"); if (!b) return;
+  S.group = b.dataset.g;
+  document.querySelectorAll("#groupSeg button").forEach(x => x.setAttribute("aria-pressed", x === b));
+  try { localStorage.setItem("stockcamion.group", S.group); } catch(err){}
+  render();
+});
+document.querySelectorAll("#groupSeg button").forEach(x => x.setAttribute("aria-pressed", x.dataset.g === S.group));
+let qT; $("#q").addEventListener("input", e => { clearTimeout(qT); qT = setTimeout(() => { S.q = e.target.value; render(); }, 120); });
+$("#summary").addEventListener("click", e => {
+  const b = e.target.closest("[data-goto]"); if (!b) return;
+  const g = b.dataset.goto;
+  if (g === "out"){ S.cat = "__out"; setView("stock"); }
+  else { if (g === "stock") S.cat = ""; setView(g); }
+});
+document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => setView(b.dataset.view)));
+$("#fab").onclick = () => openEdit(null);
+$("#btnSettings").onclick = openSettings;
+window.addEventListener("pagehide", () => Object.keys(S.pending).forEach(flushQty));
+
+/* ---------- Connexion au stock partagé ---------- */
+async function refreshNames(){
+  if (!S.user) return;
+  const ids = [...new Set(S.log.map(e => e.by).concat(Object.keys(S.members), S.items.map(i => i.updatedBy), [S.uid]).filter(Boolean))];
+  if (!ids.length) return;
+  try {
+    const ps = await S.user.profiles(ids);
+    let changed = false;
+    for (const id of ids){ const n = (ps[id] && ps[id].name) || ""; if (n && S.names[id] !== n){ S.names[id] = n; changed = true; } }
+    if (changed) render();
+  } catch(e){}
+}
+
+async function start(){
+  render(); setSync();
+  let c = null;
+  for (let i = 0; i < 60; i++){ if (window.claude && window.claude.use){ c = window.claude; break; } await sleep(100); }
+  if (!c){ S.failed = true; render(); setSync(); return; }
+  const [db, user] = await Promise.all([c.use("db").catch(() => null), c.use("user").catch(() => null)]);
+  if (!db){ S.failed = true; render(); setSync(); return; }
+  S.db = db; S.user = user;
+  if (user){
+    try { S.uid = await user.id(); } catch(e){}
+    try { const w = await user.can("data.write"); if (w === false){ S.canWrite = false; S.readOnlyReason = "Demande à la personne qui a créé l'app de t'inviter comme Éditeur."; } } catch(e){}
+  }
+  const slow = setTimeout(() => { S.stale = true; render(); setSync(); }, 10000);
+  db.collection("items").onSnapshot(snap => {
+    S.items = snap.docs.map(d => ({...d.data(), id: d.id}));
+    S.loaded.items = true;
+    if (!snap.metadata.fromCache){ S.stale = false; clearTimeout(slow); }
+    render(); setSync(); refreshNames();
+  }, err => { clearTimeout(slow); S.stale = true; if (!S.loaded.items) S.failed = true; render(); setSync(); });
+  db.collection("log").orderBy("at","desc").limit(200).onSnapshot(snap => {
+    S.log = snap.docs.map(d => d.data()).filter(e => e && e.at);
+    S.loaded.log = true;
+    if (S.view === "log") render();
+    refreshNames();
+  }, () => { S.loaded.log = true; });
+  db.collection("members").onSnapshot(snap => {
+    const m = {}; snap.docs.forEach(d => m[d.id] = d.data()); S.members = m; render(); refreshNames();
+  }, () => {});
+  db.doc("config/main").onSnapshot(snap => { S.config = snap.exists ? snap.data() : {}; render(); }, () => {});
+
+  // Ménage : efface les mouvements de plus de 6 mois (une fois par ouverture).
+  setTimeout(async () => {
+    if (!S.canWrite) return;
+    try {
+      const old = await db.collection("log").where("at","<", Date.now() - 182*864e5).limit(50).get();
+      for (const d of old.docs){ await db.doc("log/" + d.id).delete().catch(()=>{}); }
+    } catch(e){}
+  }, 8000);
+}
+start();
+})();
+</script>
