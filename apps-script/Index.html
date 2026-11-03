@@ -128,7 +128,7 @@ main{padding-bottom:calc(96px + env(safe-area-inset-bottom,0px))}
 
 /* Barre du bas */
 nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-nav.tabs .wrap{display:grid;grid-template-columns:repeat(3,1fr)}
+nav.tabs .wrap{display:grid;grid-template-columns:repeat(4,1fr)}
 nav.tabs button{border:0;background:none;padding:8px 4px 9px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12.5px;color:var(--muted);position:relative}
 nav.tabs button svg{width:22px;height:22px}
 nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:600}
@@ -220,7 +220,10 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:600}
 <nav class="tabs" aria-label="Sections">
   <div class="wrap">
     <button data-view="stock" aria-current="page">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 7h11v10H3zM14 10h4l3 3v4h-7z"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg>Stock
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M14.5 5.5a4 4 0 0 0-5 5L4 16l4 4 5.5-5.5a4 4 0 0 0 5-5l-2.5 2.5-2.5-.5-.5-2.5z"/></svg>Outillage
+    </button>
+    <button data-view="conso">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10l-1 4H8z"/><path d="M12 7v14M9 10l6 1.5M9 13.5l6 1.5M9 17l6 1.5"/></svg>Consommables
     </button>
     <button data-view="buy">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5h11M9 12h11M9 19h11"/><path d="m3 5 1.5 1.5L7 4M3 12l1.5 1.5L7 11M3 19l1.5 1.5L7 18"/></svg>À racheter<span class="badge" id="buyBadge" hidden>0</span>
@@ -324,12 +327,12 @@ function whoName(by){
 /* ---------- Rendu ---------- */
 function render(){
   renderSummary(); renderBanner();
-  if (S.view === "stock") renderStock();
+  if (isListView()) renderStock();
   if (S.view === "buy") renderBuy();
   if (S.view === "log") renderLog();
   const n = S.items.filter(it => isLow(it) || needsTool(it)).length;
   const b = $("#buyBadge"); b.hidden = !n; b.textContent = n;
-  $("#fab").hidden = !(S.view === "stock" && S.loaded);
+  $("#fab").hidden = !(isListView() && S.loaded);
   $("#vehName").textContent = (S.config.vehicle || "Stock Camion");
 }
 
@@ -353,10 +356,14 @@ function renderBanner(){
   const r = $("#retryBtn"); if (r) r.onclick = () => refresh(true);
 }
 
+const CONSO_ORDER = ["Fixations & visserie","Étanchéité","Zinguerie","Sécurité & EPI","Électroportatif","Outillage à main","Accès & levage","Divers"];
+function kindNow(){ return S.view === "conso" ? "conso" : "outil"; }
+function isListView(){ return S.view === "stock" || S.view === "conso"; }
 function renderChips(){
-  const used = [...new Set(S.items.map(i => i.cat || "Divers"))];
-  const cats = CATS.filter(c => used.includes(c)).concat(used.filter(c => !CATS.includes(c)).sort(fr));
-  const all = [["", "Tout"], ["__out", "Sortis"], ...cats.map(c => [c, c])];
+  const k = kindNow(), base = k === "conso" ? CONSO_ORDER : CATS;
+  const used = [...new Set(S.items.filter(i => i.kind === k).map(i => i.cat || "Divers"))];
+  const cats = base.filter(c => used.includes(c)).concat(used.filter(c => !base.includes(c)).sort(fr));
+  const all = [["", "Tout"], ...(k === "outil" ? [["__out", "Sortis"]] : []), ...cats.map(c => [c, c])];
   $("#chips").innerHTML = all.map(([v,l]) => `<button class="chip" data-cat="${esc(v)}" aria-pressed="${S.cat===v}">${esc(l)}</button>`).join("");
 }
 
@@ -400,8 +407,15 @@ function renderStock(){
     const a = $("#addFirst"); if (a) a.onclick = () => openEdit(null);
     return;
   }
+  const kind = kindNow();
+  if (!S.items.some(it => it.kind === kind)){
+    list.innerHTML = `<div class="empty"><h3>${kind === "conso" ? "Aucun consommable pour l'instant" : "Aucun outil pour l'instant"}</h3><p>${kind === "conso" ? "Visserie, pointes, crochets, mastics, étain, EPI… tout ce qui se compte et se rachète." : "Tout ce qui se sort sur chantier et revient au camion."}</p><div class="btns"><button class="btn primary" id="addKind">Ajouter ${kind === "conso" ? "un consommable" : "un outil"}</button></div></div>`;
+    $("#addKind").onclick = () => openEdit(null);
+    return;
+  }
   const qn = norm(S.q);
   let items = S.items.filter(it => {
+    if (it.kind !== kind) return false;
     if (S.cat === "__out") { if (!(it.kind === "outil" && it.status && it.status !== "camion")) return false; }
     else if (S.cat && (it.cat || "Divers") !== S.cat) return false;
     if (!qn) return true;
@@ -414,7 +428,7 @@ function renderStock(){
   const keyOf = it => S.group === "loc" ? (it.loc || "Sans emplacement")
                    : S.group === "status" ? (it.kind === "conso" ? (isLow(it) ? "Consommables à racheter" : "Consommables en stock") : (STATUS[it.status]||STATUS.camion).l)
                    : (it.cat || "Divers");
-  const order = S.group === "loc" ? LOCS : S.group === "status" ? ["Manquant","En réparation","Sur chantier","Consommables à racheter","Dans le camion","Consommables en stock"] : CATS;
+  const order = S.group === "loc" ? LOCS : S.group === "status" ? ["Manquant","En réparation","Sur chantier","Consommables à racheter","Dans le camion","Consommables en stock"] : (kind === "conso" ? CONSO_ORDER : CATS);
   const groups = {};
   items.forEach(it => (groups[keyOf(it)] ||= []).push(it));
   const keys = Object.keys(groups).sort((a,b) => {
@@ -489,8 +503,10 @@ function renderLog(){
 }
 
 function setView(v){
+  if (v !== S.view && (v === "stock" || v === "conso")){ S.cat = ""; S.q = ""; $("#q").value = ""; }
   S.view = v;
-  $("#viewStock").hidden = v !== "stock";
+  $("#q").placeholder = v === "conso" ? "Chercher : vis, crochets, mastic…" : "Chercher : cisaille, perfo, harnais…";
+  $("#viewStock").hidden = !isListView();
   $("#viewBuy").hidden = v !== "buy";
   $("#viewLog").hidden = v !== "log";
   document.querySelectorAll("nav.tabs button").forEach(b => b.dataset.view === v ? b.setAttribute("aria-current","page") : b.removeAttribute("aria-current"));
@@ -667,7 +683,7 @@ async function flushQty(id){
 /* ---------- Fiche article ---------- */
 function openEdit(id){
   const it = id ? S.items.find(i => i.id === id) : null;
-  const d = it || {name:"", kind:"outil", cat: (S.cat && S.cat !== "__out") ? S.cat : "", loc:"", qty:1, unit:"", min:0, status:"camion", holder:"", note:""};
+  const d = it || {name:"", kind: kindNow(), cat: (isListView() && S.cat && S.cat !== "__out") ? S.cat : "", loc:"", qty:1, unit:"", min:0, status:"camion", holder:"", note:""};
   const cats = [...new Set(CATS.concat(S.items.map(i => i.cat).filter(Boolean)))];
   const locs = [...new Set(LOCS.concat(S.items.map(i => i.loc).filter(Boolean)))];
   const sh = openSheet(`
@@ -857,8 +873,9 @@ let qT; $("#q").addEventListener("input", e => { clearTimeout(qT); qT = setTimeo
 $("#summary").addEventListener("click", e => {
   const b = e.target.closest("[data-goto]"); if (!b) return;
   const g = b.dataset.goto;
-  if (g === "out"){ S.cat = "__out"; setView("stock"); }
-  else { if (g === "stock") S.cat = ""; setView(g); }
+  if (g === "out"){ setView("stock"); S.cat = "__out"; render(); }
+  else if (g === "stock"){ const v = isListView() ? S.view : "stock"; setView(v); S.cat = ""; render(); }
+  else setView(g);
 });
 document.querySelectorAll("nav.tabs button").forEach(b => b.addEventListener("click", () => setView(b.dataset.view)));
 $("#fab").onclick = () => openEdit(null);
