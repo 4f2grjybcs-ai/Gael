@@ -4,7 +4,7 @@
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Stock Camion</title>
+<title>Le bubus à gaga</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
@@ -209,7 +209,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:600}
 <header class="top">
   <div class="wrap">
     <div class="brand">
-      <h1 id="vehName">Stock Camion</h1>
+      <h1 id="vehName">Le bubus à gaga</h1>
       <div class="sub"><span class="dot" id="syncDot"></span><span id="syncTxt">Connexion…</span></div>
     </div>
     <button class="icon-btn" id="btnSettings" aria-label="Réglages">
@@ -375,7 +375,7 @@ function render(){
   const n = S.items.filter(it => isLow(it) || needsTool(it)).length;
   const b = $("#buyBadge"); b.hidden = !n; b.textContent = n;
   $("#fab").hidden = !(isListView() && S.loaded);
-  $("#vehName").textContent = (S.config.vehicle || "Stock Camion");
+  $("#vehName").textContent = (S.config.vehicle || "Le bubus à gaga");
 }
 
 function renderSummary(){

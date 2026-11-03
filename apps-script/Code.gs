@@ -25,7 +25,7 @@ var STATUSES = { camion: 'dans le camion', chantier: 'sur chantier', atelier: 'e
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('Stock Camion')
+    .setTitle('Le bubus à gaga')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover');
 }
 
