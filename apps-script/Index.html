@@ -1,5 +1,10 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Stock Camion</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
@@ -27,6 +32,9 @@
   --scrim:rgba(0,0,0,.6); --shadow:0 10px 30px rgba(0,0,0,.5); color-scheme:dark;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px)}
 body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.4;-webkit-tap-highlight-color:transparent}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
 button,input,select,textarea{font:inherit;color:inherit}
@@ -150,6 +158,8 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:600}
 .sheet .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 .sheet .actions .grow{flex:1}
 
+.gate{max-width:420px;margin:12vh auto 0;display:flex;flex-direction:column;gap:14px}
+.gate h2{margin:0;font-family:var(--f-display);font-size:30px;text-transform:uppercase}
 .banner{margin-top:12px;border-radius:var(--r);padding:10px 14px;font-size:14px;background:var(--warn-soft);color:var(--fg);border:1px solid var(--line)}
 .banner button{border:0;background:none;color:var(--accent);font-weight:600;padding:0;text-decoration:underline}
 .toast{position:fixed;z-index:50;left:50%;transform:translateX(-50%);bottom:calc(140px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);border-radius:999px;padding:10px 18px;font-size:14px;max-width:calc(100% - 32px);text-align:center;box-shadow:var(--shadow)}
@@ -157,6 +167,8 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:600}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(24px);opacity:.6}}}
 @media (max-width:380px){.stat b{font-size:26px}.row-main .name{font-size:15px}}
 </style>
+</head>
+<body>
 
 <header class="top">
   <div class="wrap">
@@ -276,9 +288,8 @@ const TEMPLATE = [
 ];
 
 const S = {
-  db:null, user:null, uid:null, canWrite:true, readOnlyReason:"",
-  items:[], log:[], members:{}, config:{}, names:{},
-  loaded:{items:false, log:false}, stale:false, failed:false,
+  code:"", by:"", items:[], log:[], config:{},
+  loaded:false, stale:false, failed:false, busy:0, lastSync:0,
   view:"stock", q:"", cat:"", group:"cat",
   pending:{}
 };
@@ -288,22 +299,26 @@ const norm = s => String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerC
 const fr = (a,b) => a.localeCompare(b,"fr",{sensitivity:"base"});
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-try { const g = localStorage.getItem("stockcamion.group"); if (g) S.group = g; } catch(e){}
+const LS = {
+  get(k){ try { return localStorage.getItem("stockcamion." + k) || ""; } catch(e){ return ""; } },
+  set(k, v){ try { localStorage.setItem("stockcamion." + k, v); } catch(e){} }
+};
+S.group = LS.get("group") || "cat";
+S.code = LS.get("code");
+S.by = LS.get("nick");
 
 /* ---------- Calculs ---------- */
 function qtyOf(it){ const p = S.pending[it.id]; return p ? p.qty : (Number(it.qty)||0); }
 function isLow(it){
   if (it.kind !== "conso") return false;
   const q = qtyOf(it), m = Number(it.min)||0;
-  return m > 0 ? q <= m : q <= 0;
+  return m > 0 ? q < m : q <= 0;
 }
 function needsTool(it){ return it.kind === "outil" && (it.status === "manquant" || it.status === "atelier"); }
 function isOut(it){ return it.kind === "outil" && it.status === "chantier"; }
-function whoName(id){
-  if (!id) return "Quelqu'un";
-  const nick = S.members[id] && S.members[id].nick;
-  if (id === S.uid) return nick ? nick + " (toi)" : "Toi";
-  return nick || S.names[id] || "Quelqu'un";
+function whoName(by){
+  if (!by) return "Quelqu'un";
+  return by === S.by ? by + " (toi)" : by;
 }
 
 /* ---------- Rendu ---------- */
@@ -314,14 +329,12 @@ function render(){
   if (S.view === "log") renderLog();
   const n = S.items.filter(it => isLow(it) || needsTool(it)).length;
   const b = $("#buyBadge"); b.hidden = !n; b.textContent = n;
-  $("#fab").hidden = !(S.view === "stock" && S.canWrite && S.db && anyLoaded());
-  document.body.classList.toggle("ro", !S.canWrite);
+  $("#fab").hidden = !(S.view === "stock" && S.loaded);
   $("#vehName").textContent = (S.config.vehicle || "Stock Camion");
 }
-function anyLoaded(){ return S.loaded.items; }
 
 function renderSummary(){
-  if (!S.loaded.items) return;
+  if (!S.loaded) return;
   const total = S.items.length;
   const buy = S.items.filter(it => isLow(it) || needsTool(it)).length;
   const out = S.items.filter(isOut).length;
@@ -333,12 +346,10 @@ function renderSummary(){
 
 function renderBanner(){
   let h = "";
-  if (S.failed) h = `<div class="banner">Le stock partagé n'est pas joignable sur cette page. Ouvre-la depuis le lien claude.ai envoyé par l'équipe, connecté à ton compte.</div>`;
-  else if (!S.canWrite && S.db) h = `<div class="banner">Lecture seule : tu peux consulter le stock mais pas le modifier. ${esc(S.readOnlyReason)}</div>`;
-  else if (S.db && S.uid && S.loaded.items && !(S.members[S.uid] && S.members[S.uid].nick) && !S.names[S.uid])
-    h = `<div class="banner">Indique ton prénom pour que l'équipe sache qui a sorti quoi. <button id="askNick">Ajouter mon prénom</button></div>`;
+  if (S.failed) h = `<div class="banner">Impossible de joindre le stock. Vérifie le réseau ; l'app réessaie toute seule. <button id="retryBtn">Réessayer</button></div>`;
+  else if (S.stale) h = `<div class="banner">Pas de réseau : affichage de la dernière version connue${S.lastSync ? " (" + new Date(S.lastSync).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"}) + ")" : ""}. Les modifications ne passent pas pour l'instant.</div>`;
   $("#bannerSlot").innerHTML = h;
-  const a = $("#askNick"); if (a) a.onclick = openSettings;
+  const r = $("#retryBtn"); if (r) r.onclick = () => refresh(true);
 }
 
 function renderChips(){
@@ -365,7 +376,7 @@ function rowHTML(it){
     const st = STATUS[it.status] || STATUS.camion;
     if (it.status && it.status !== "camion" && it.holder) meta += ` · ${esc(it.holder)}`;
     if ((Number(it.qty)||1) > 1) meta += ` · ×${esc(it.qty)}`;
-    side = `<button class="pill ${st.c}" data-act="status" ${S.canWrite?"":"disabled"}>${st.l}</button>`;
+    side = `<button class="pill ${st.c}" data-act="status">${st.l}</button>`;
   }
   return `<div class="row" data-id="${esc(it.id)}">
     <button class="row-main" data-act="edit"><span class="name">${esc(it.name)}</span><span class="meta">${meta}</span></button>${side}</div>`;
@@ -373,7 +384,7 @@ function rowHTML(it){
 
 function renderStock(){
   const list = $("#list");
-  if (!S.loaded.items){
+  if (!S.loaded){
     if (S.failed || S.stale) list.innerHTML = `<div class="empty"><h3>Stock injoignable pour l'instant</h3><p>La connexion ne répond pas. Vérifie le réseau : la liste s'affichera dès qu'elle revient.</p></div>`;
     return;
   }
@@ -382,7 +393,7 @@ function renderStock(){
     list.innerHTML = `<div class="empty">
       <h3>Le camion est encore vide</h3>
       <p>Ajoute les outils et consommables un par un, ou pars d'une liste type de couvreur (électroportatif, zinguerie, fixations, EPI, échelles…) que tu ajusteras ensuite.</p>
-      ${S.canWrite ? `<div class="btns"><button class="btn primary" id="tplBtn">Charger la liste type (${TEMPLATE.length} articles)</button><button class="btn" id="addFirst">Ajouter un article</button></div>` : ""}
+      <div class="btns"><button class="btn primary" id="tplBtn">Charger la liste type (${TEMPLATE.length} articles)</button><button class="btn" id="addFirst">Ajouter un article</button></div>
     </div>`;
     const t = $("#tplBtn"); if (t) t.onclick = loadTemplate;
     const a = $("#addFirst"); if (a) a.onclick = () => openEdit(null);
@@ -424,7 +435,7 @@ function suggestQty(it){ const m = Number(it.min)||1, q = qtyOf(it); return Math
 
 function renderBuy(){
   const v = $("#viewBuy");
-  if (!S.loaded.items){ v.innerHTML = `<div class="empty"><h3>Chargement…</h3></div>`; return; }
+  if (!S.loaded){ v.innerHTML = `<div class="empty"><h3>Chargement…</h3></div>`; return; }
   const {low, tools} = buyLines();
   if (!low.length && !tools.length){
     v.innerHTML = `<div class="empty"><h3>Rien à racheter</h3><p>Tous les consommables sont au-dessus de leur seuil mini et aucun outil n'est manquant ou en réparation. Un article apparaît ici dès qu'il passe sous son seuil.</p></div>`;
@@ -461,7 +472,7 @@ function copyList(){
 
 function renderLog(){
   const v = $("#viewLog");
-  if (!S.loaded.log){ v.innerHTML = `<div class="empty"><h3>Chargement de l'historique…</h3></div>`; return; }
+  if (!S.loaded){ v.innerHTML = `<div class="empty"><h3>Chargement de l'historique…</h3></div>`; return; }
   if (!S.log.length){ v.innerHTML = `<div class="empty"><h3>Aucun mouvement pour l'instant</h3><p>Chaque sortie d'outil, retour au camion, ajout ou utilisation de consommable s'inscrira ici avec le nom de la personne et l'heure.</p></div>`; return; }
   const days = {};
   S.log.forEach(e => {
@@ -473,7 +484,7 @@ function renderLog(){
   const yest = new Date(Date.now()-864e5).toLocaleDateString("fr-FR",{weekday:"long", day:"numeric", month:"long"});
   v.innerHTML = Object.entries(days).map(([k, es]) => `<div class="log-day group"><h2>${k===today?"Aujourd'hui":k===yest?"Hier":esc(k)}</h2><div class="panel">${
     es.map(e => `<div class="log-row"><time>${new Date(e.at).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})}</time><div><b>${esc(e.item)}</b> ${esc(e.text)}<div class="who">${esc(whoName(e.by))}</div></div></div>`).join("")
-  }</div></div>`).join("") + `<p class="hint" style="margin-top:12px">Les 200 derniers mouvements sont affichés ; ceux de plus de 6 mois sont effacés automatiquement.</p>`;
+  }</div></div>`).join("") + `<p class="hint" style="margin-top:12px">Les 200 derniers mouvements sont affichés. L'historique complet est dans l'onglet « Historique » du Google Sheet.</p>`;
 }
 
 function setView(v){
@@ -489,11 +500,11 @@ function setView(v){
 function setSync(){
   const dot = $("#syncDot"), t = $("#syncTxt");
   dot.className = "dot";
-  if (S.failed){ dot.classList.add("bad"); t.textContent = "Non connecté au stock partagé"; }
-  else if (!S.loaded.items && S.stale){ dot.classList.add("warn"); t.textContent = "Connexion lente…"; }
-  else if (!S.loaded.items){ t.textContent = "Connexion…"; }
-  else if (S.stale){ dot.classList.add("warn"); t.textContent = "Hors ligne · peut ne pas être à jour"; }
-  else { dot.classList.add("ok"); t.textContent = S.canWrite ? "À jour · partagé avec l'équipe" : "À jour · lecture seule"; }
+  if (S.busy){ t.textContent = "Enregistrement…"; }
+  else if (S.failed && !S.loaded){ dot.classList.add("bad"); t.textContent = "Stock injoignable"; }
+  else if (!S.loaded){ t.textContent = "Connexion…"; }
+  else if (S.stale || S.failed){ dot.classList.add("warn"); t.textContent = "Hors ligne · peut ne pas être à jour"; }
+  else { dot.classList.add("ok"); t.textContent = "À jour · partagé avec l'équipe"; }
 }
 
 /* ---------- Toast & feuilles ---------- */
@@ -515,56 +526,67 @@ function openSheet(html){
 function closeSheet(){ const s = $("#scrim"); if (s) s.remove(); }
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
 
-/* ---------- Écritures ---------- */
-function handleWriteError(e){
-  const code = e && e.code;
-  if (code === "invalid_argument" || code === "not_granted"){
-    S.canWrite = false;
-    S.readOnlyReason = "Demande à la personne qui a créé l'app de t'inviter comme Éditeur.";
-    toast("Modification refusée : tu es en lecture seule");
-    render(); setSync();
-  } else if (code === "quota_exceeded") toast("Stockage plein : supprime d'anciens articles");
-  else toast("Pas enregistré, réessaie dans un instant");
+/* ---------- Échanges avec le Google Sheet ---------- */
+function rawCall(req){
+  return new Promise((res, rej) => {
+    if (!(window.google && google.script && google.script.run)) { rej(new Error("HORS_APPS_SCRIPT")); return; }
+    google.script.run.withSuccessHandler(res).withFailureHandler(rej).api(req);
+  });
 }
-async function write(fn){
-  try { await fn(); return true; }
-  catch(e){
-    if (e && e.code === "unavailable"){ await sleep(400 + Math.random()*600); try { await fn(); return true; } catch(e2){ handleWriteError(e2); return false; } }
-    handleWriteError(e); return false;
+function applyState(st){
+  if (!st || !Array.isArray(st.items)) return;
+  S.items = st.items; S.log = st.log || []; S.config = st.config || {};
+  S.loaded = true; S.failed = false; S.stale = false; S.lastSync = Date.now();
+  try { localStorage.setItem("stockcamion.cache", JSON.stringify({items:S.items, log:S.log, config:S.config, at:S.lastSync})); } catch(e){}
+  render(); setSync();
+}
+function errCode(e){ const m = String((e && e.message) || e || ""); return (m.match(/[A-Z_]{5,}/) || [""])[0]; }
+async function api(action, extra, quiet){
+  const req = Object.assign({action, code:S.code, by:S.by}, extra || {});
+  if (action !== "load"){ S.busy++; setSync(); }
+  try {
+    const st = await rawCall(req);
+    applyState(st);
+    return true;
+  } catch(e){
+    const c = errCode(e);
+    if (c === "CODE_EQUIPE"){ askCode(!!S.code); return false; }
+    if (action === "load"){ S.failed = true; if (S.loaded) S.stale = true; render(); setSync(); return false; }
+    if (!quiet) toast(c === "ARTICLE_INTROUVABLE" ? "Cet article a été supprimé entre-temps" : c === "HORS_APPS_SCRIPT" ? "Ouvre l'app depuis son lien Google" : "Pas enregistré : vérifie le réseau et réessaie");
+    refresh();
+    return false;
+  } finally {
+    if (action !== "load"){ S.busy--; setSync(); }
   }
 }
-function logAct(item, text){
-  if (!S.db) return;
-  S.db.collection("log").add({at: Date.now(), by: S.uid || null, item: String(item).slice(0,120), text: String(text).slice(0,200)}).catch(()=>{});
+let refreshing = false;
+async function refresh(force){
+  if (refreshing || (S.busy && !force) || Object.keys(S.pending).length) return;
+  refreshing = true;
+  try { await api("load"); } finally { refreshing = false; }
 }
-function stamp(){ return {updatedAt: Date.now(), updatedBy: S.uid || null}; }
 
 function bump(id, delta){
-  const it = S.items.find(i => i.id === id); if (!it || !S.canWrite) return;
-  const p = S.pending[id] || (S.pending[id] = {qty: Number(it.qty)||0, from: Number(it.qty)||0, t:null});
-  p.qty = Math.max(0, p.qty + delta);
+  const it = S.items.find(i => i.id === id); if (!it) return;
+  const p = S.pending[id] || (S.pending[id] = {qty: Number(it.qty)||0, delta:0, t:null});
+  const next = Math.max(0, p.qty + delta);
+  if (next === p.qty) return;
+  p.delta += next - p.qty; p.qty = next;
   clearTimeout(p.t);
   p.t = setTimeout(() => flushQty(id), 900);
   render();
 }
 async function flushQty(id){
   const p = S.pending[id]; if (!p) return;
-  const it = S.items.find(i => i.id === id);
-  const qty = p.qty, from = p.from;
-  if (qty === from || !it){ delete S.pending[id]; render(); return; }
-  const ok = await write(() => S.db.doc("items/" + id).update({qty, ...stamp()}));
+  clearTimeout(p.t);
   delete S.pending[id];
-  if (ok){
-    const d = qty - from, u = it.unit || "u";
-    logAct(it.name, d < 0 ? `: ${-d} ${u} utilisé${-d>1?"s":""} (reste ${qty})` : `: +${d} ${u} ajouté${d>1?"s":""} (total ${qty})`);
-  }
+  if (p.delta) await api("adjust", {id, delta:p.delta});
   render();
 }
 
 /* ---------- Fiche article ---------- */
 function openEdit(id){
   const it = id ? S.items.find(i => i.id === id) : null;
-  if (it && !S.canWrite){ openView(it); return; }
   const d = it || {name:"", kind:"outil", cat: (S.cat && S.cat !== "__out") ? S.cat : "", loc:"", qty:1, unit:"", min:0, status:"camion", holder:"", note:""};
   const cats = [...new Set(CATS.concat(S.items.map(i => i.cat).filter(Boolean)))];
   const locs = [...new Set(LOCS.concat(S.items.map(i => i.loc).filter(Boolean)))];
@@ -615,7 +637,7 @@ function openEdit(id){
   if (del) del.onclick = async () => {
     if (!del.classList.contains("armed")){ del.classList.add("armed"); del.textContent = "Confirmer la suppression"; return; }
     del.disabled = true;
-    if (await write(() => S.db.doc("items/" + it.id).delete())){ logAct(it.name, "supprimé du stock"); closeSheet(); toast("Article supprimé"); }
+    if (await api("delete", {id: it.id})){ closeSheet(); toast("Article supprimé"); }
     else del.disabled = false;
   };
   $("#editForm").onsubmit = async e => {
@@ -626,24 +648,10 @@ function openEdit(id){
     const body = { name, kind, cat: $("#f_cat").value.trim() || "Divers", loc: $("#f_loc").value.trim(), note: $("#f_note").value.trim() };
     if (kind === "conso"){ Object.assign(body, {qty: int($("#f_qty").value,0), unit: $("#f_unit").value.trim(), min: int($("#f_min").value,0), status:"", holder:""}); }
     else { const st = $("#f_status").value; Object.assign(body, {qty: Math.max(1,int($("#f_tqty").value,1)), unit:"", min:0, status: st, holder: st === "camion" ? "" : $("#f_holder").value.trim()}); }
-    Object.assign(body, stamp());
-    const btn = e.submitter || sh.querySelector("button[type=submit]"); btn.disabled = true;
-    if (it){
-      if (S.pending[it.id]){ clearTimeout(S.pending[it.id].t); delete S.pending[it.id]; }
-      const ok = await write(() => S.db.doc("items/" + it.id).set((({id, ...rest}) => ({...rest, ...body, createdAt: it.createdAt || Date.now()}))(it)));
-      if (ok){
-        const changes = [];
-        if (kind === "outil" && it.status !== body.status) changes.push(`→ ${STATUS[body.status].l.toLowerCase()}${body.holder?" ("+body.holder+")":""}`);
-        if (kind === "conso" && Number(it.qty) !== body.qty) changes.push(`: stock corrigé à ${body.qty} ${body.unit||"u"}`);
-        logAct(name, changes.length ? changes.join(", ") : "fiche modifiée");
-        closeSheet(); toast("Enregistré");
-      } else btn.disabled = false;
-    } else {
-      body.createdAt = Date.now();
-      const ref = S.db.collection("items").doc();
-      if (await write(() => ref.set(body))){ logAct(name, `ajouté au stock${kind==="conso" ? ` (${body.qty} ${body.unit||"u"})` : ""}`); closeSheet(); toast("Ajouté"); }
-      else btn.disabled = false;
-    }
+    const btn = sh.querySelector("button[type=submit]"); btn.disabled = true;
+    if (it){ const p = S.pending[it.id]; if (p){ clearTimeout(p.t); delete S.pending[it.id]; } body.id = it.id; }
+    if (await api("save", {item: body})){ closeSheet(); toast(it ? "Enregistré" : "Ajouté"); }
+    else btn.disabled = false;
   };
 }
 function openView(it){
@@ -658,7 +666,7 @@ function openView(it){
 
 /* ---------- Sortie / retour rapide d'un outil ---------- */
 function openStatus(id){
-  const it = S.items.find(i => i.id === id); if (!it || !S.canWrite) return;
+  const it = S.items.find(i => i.id === id); if (!it) return;
   const cur = it.status || "camion";
   const sh = openSheet(`<h3>${esc(it.name)}</h3>
     <div class="form">
@@ -675,48 +683,68 @@ function openStatus(id){
     const holder = sel === "camion" ? "" : $("#s_holder").value.trim();
     if (sel === cur && holder === (it.holder||"")){ closeSheet(); return; }
     $("#stSave").disabled = true;
-    if (await write(() => S.db.doc("items/" + it.id).update({status: sel, holder, ...stamp()}))){
-      logAct(it.name, sel === "camion" ? "rangé dans le camion" : `→ ${STATUS[sel].l.toLowerCase()}${holder ? " (" + holder + ")" : ""}`);
+    if (await api("status", {id: it.id, status: sel, holder})){
       closeSheet(); toast(sel === "camion" ? "Rangé dans le camion" : STATUS[sel].l);
     } else $("#stSave").disabled = false;
   };
 }
 
-/* ---------- Réglages ---------- */
+/* ---------- Prénom, code d'équipe, réglages ---------- */
+function askName(then){
+  const sh = openSheet(`<h3>Bienvenue</h3>
+    <form class="form" id="nameForm" novalidate>
+      <p class="hint">Ton prénom s'affiche dans l'historique pour que l'équipe sache qui a sorti ou utilisé quoi.</p>
+      <div class="field"><label for="n_nick">Ton prénom</label><input id="n_nick" maxlength="30" autocomplete="given-name" value="${esc(S.by)}" placeholder="ex. Julien"></div>
+      <div class="actions"><button type="submit" class="btn primary grow">Continuer</button></div>
+    </form>`);
+  setTimeout(() => $("#n_nick").focus(), 50);
+  $("#nameForm").onsubmit = e => {
+    e.preventDefault();
+    const v = $("#n_nick").value.trim();
+    if (!v){ $("#n_nick").focus(); return; }
+    S.by = v; LS.set("nick", v); closeSheet(); render(); if (then) then();
+  };
+}
+function askCode(wrong){
+  openSheet(`<h3>Code d'équipe</h3>
+    <form class="form" id="codeForm" novalidate>
+      <p class="hint">${wrong ? "Ce code n'est pas le bon. " : ""}Le stock est protégé par un code. Demande-le à la personne qui gère l'app.</p>
+      <div class="field"><label for="c_code">Code</label><input id="c_code" maxlength="40" autocomplete="off" inputmode="text" value=""></div>
+      <div class="actions"><button type="submit" class="btn primary grow">Valider</button></div>
+    </form>`);
+  setTimeout(() => $("#c_code").focus(), 50);
+  $("#codeForm").onsubmit = e => {
+    e.preventDefault();
+    S.code = $("#c_code").value.trim(); LS.set("code", S.code); closeSheet(); refresh(true);
+  };
+}
 function openSettings(){
-  const mine = (S.uid && S.members[S.uid] && S.members[S.uid].nick) || "";
   const sh = openSheet(`<h3>Réglages</h3>
     <form class="form" id="setForm" novalidate>
-      <div class="field"><label for="s_nick">Ton prénom (affiché dans l'historique)</label><input id="s_nick" maxlength="30" value="${esc(mine)}" placeholder="${esc(S.names[S.uid] || "ex. Julien")}" ${S.uid && S.canWrite ? "" : "disabled"}></div>
-      <div class="field"><label for="s_veh">Nom du véhicule</label><input id="s_veh" maxlength="40" value="${esc(S.config.vehicle||"")}" placeholder="ex. Master blanc – AB-123-CD" ${S.canWrite ? "" : "disabled"}></div>
-      <p class="hint">Pour ajouter un collègue : ouvre le menu Partager de cette page sur claude.ai et invite-le par e-mail comme <b>Éditeur</b>. Il pourra alors sortir des outils et décompter les consommables depuis son téléphone.</p>
-      <div class="actions"><button type="submit" class="btn primary grow" ${S.canWrite?"":"disabled"}>Enregistrer</button><button type="button" class="btn" id="setCancel">Fermer</button></div>
+      <div class="field"><label for="s_nick">Ton prénom (sur ce téléphone)</label><input id="s_nick" maxlength="30" value="${esc(S.by)}" placeholder="ex. Julien"></div>
+      <div class="field"><label for="s_veh">Nom du véhicule (pour toute l'équipe)</label><input id="s_veh" maxlength="40" value="${esc(S.config.vehicle||"")}" placeholder="ex. Master blanc – AB-123-CD"></div>
+      <p class="hint">Pour ajouter un collègue, envoie-lui simplement le lien de l'app (et le code d'équipe s'il y en a un). Pas besoin de compte.</p>
+      <p class="hint">Astuce : dans le navigateur du téléphone, « Ajouter à l'écran d'accueil » crée une icône comme une vraie appli.</p>
+      <div class="actions"><button type="submit" class="btn primary grow">Enregistrer</button><button type="button" class="btn" id="setCancel">Fermer</button></div>
     </form>`);
   $("#setCancel").onclick = closeSheet;
   $("#setForm").onsubmit = async e => {
     e.preventDefault();
     const nick = $("#s_nick").value.trim(), veh = $("#s_veh").value.trim();
+    if (nick){ S.by = nick; LS.set("nick", nick); }
     let ok = true;
-    if (S.uid && nick !== mine) ok = await write(() => S.db.doc("members/" + S.uid).set({nick, updatedAt: Date.now()}));
-    if (ok && veh !== (S.config.vehicle||"")) ok = await write(() => S.db.doc("config/main").set({...S.config, vehicle: veh}));
-    if (ok){ closeSheet(); toast("Réglages enregistrés"); }
+    if (veh !== (S.config.vehicle||"")) ok = await api("config", {vehicle: veh});
+    if (ok){ closeSheet(); toast("Réglages enregistrés"); render(); }
   };
 }
 
 /* ---------- Liste type ---------- */
 async function loadTemplate(){
   const btn = $("#tplBtn"); if (!btn || btn.disabled) return;
-  btn.disabled = true;
-  const col = S.db.collection("items");
-  let n = 0;
-  for (const [name, kind, cat, loc, qty, unit, min] of TEMPLATE){
-    btn.textContent = `Ajout… ${n}/${TEMPLATE.length}`;
-    const body = {name, kind, cat, loc, qty, unit, min, status: kind === "outil" ? "camion" : "", holder:"", note:"", createdAt: Date.now(), ...stamp()};
-    const ok = await write(() => col.doc().set(body));
-    if (!ok) break;
-    n++;
-  }
-  if (n) { logAct("Liste type couvreur", `chargée (${n} articles)`); toast(`${n} articles ajoutés : ajuste les quantités`); }
+  btn.disabled = true; btn.textContent = "Ajout en cours…";
+  const items = TEMPLATE.map(([name, kind, cat, loc, qty, unit, min]) => ({name, kind, cat, loc, qty, unit, min, status: kind === "outil" ? "camion" : ""}));
+  if (await api("bulk", {items})) toast(`${items.length} articles ajoutés : ajuste les quantités`);
+  else { btn.disabled = false; btn.textContent = `Charger la liste type (${TEMPLATE.length} articles)`; }
 }
 
 /* ---------- Évènements ---------- */
@@ -735,7 +763,7 @@ $("#groupSeg").addEventListener("click", e => {
   const b = e.target.closest("button"); if (!b) return;
   S.group = b.dataset.g;
   document.querySelectorAll("#groupSeg button").forEach(x => x.setAttribute("aria-pressed", x === b));
-  try { localStorage.setItem("stockcamion.group", S.group); } catch(err){}
+  LS.set("group", S.group);
   render();
 });
 document.querySelectorAll("#groupSeg button").forEach(x => x.setAttribute("aria-pressed", x.dataset.g === S.group));
@@ -751,58 +779,20 @@ $("#fab").onclick = () => openEdit(null);
 $("#btnSettings").onclick = openSettings;
 window.addEventListener("pagehide", () => Object.keys(S.pending).forEach(flushQty));
 
-/* ---------- Connexion au stock partagé ---------- */
-async function refreshNames(){
-  if (!S.user) return;
-  const ids = [...new Set(S.log.map(e => e.by).concat(Object.keys(S.members), S.items.map(i => i.updatedBy), [S.uid]).filter(Boolean))];
-  if (!ids.length) return;
+/* ---------- Démarrage ---------- */
+function start(){
   try {
-    const ps = await S.user.profiles(ids);
-    let changed = false;
-    for (const id of ids){ const n = (ps[id] && ps[id].name) || ""; if (n && S.names[id] !== n){ S.names[id] = n; changed = true; } }
-    if (changed) render();
+    const c = JSON.parse(localStorage.getItem("stockcamion.cache") || "null");
+    if (c && Array.isArray(c.items)){ S.items = c.items; S.log = c.log || []; S.config = c.config || {}; S.loaded = true; S.stale = true; S.lastSync = c.at || 0; }
   } catch(e){}
-}
-
-async function start(){
   render(); setSync();
-  let c = null;
-  for (let i = 0; i < 60; i++){ if (window.claude && window.claude.use){ c = window.claude; break; } await sleep(100); }
-  if (!c){ S.failed = true; render(); setSync(); return; }
-  const [db, user] = await Promise.all([c.use("db").catch(() => null), c.use("user").catch(() => null)]);
-  if (!db){ S.failed = true; render(); setSync(); return; }
-  S.db = db; S.user = user;
-  if (user){
-    try { S.uid = await user.id(); } catch(e){}
-    try { const w = await user.can("data.write"); if (w === false){ S.canWrite = false; S.readOnlyReason = "Demande à la personne qui a créé l'app de t'inviter comme Éditeur."; } } catch(e){}
-  }
-  const slow = setTimeout(() => { S.stale = true; render(); setSync(); }, 10000);
-  db.collection("items").onSnapshot(snap => {
-    S.items = snap.docs.map(d => ({...d.data(), id: d.id}));
-    S.loaded.items = true;
-    if (!snap.metadata.fromCache){ S.stale = false; clearTimeout(slow); }
-    render(); setSync(); refreshNames();
-  }, err => { clearTimeout(slow); S.stale = true; if (!S.loaded.items) S.failed = true; render(); setSync(); });
-  db.collection("log").orderBy("at","desc").limit(200).onSnapshot(snap => {
-    S.log = snap.docs.map(d => d.data()).filter(e => e && e.at);
-    S.loaded.log = true;
-    if (S.view === "log") render();
-    refreshNames();
-  }, () => { S.loaded.log = true; });
-  db.collection("members").onSnapshot(snap => {
-    const m = {}; snap.docs.forEach(d => m[d.id] = d.data()); S.members = m; render(); refreshNames();
-  }, () => {});
-  db.doc("config/main").onSnapshot(snap => { S.config = snap.exists ? snap.data() : {}; render(); }, () => {});
-
-  // Ménage : efface les mouvements de plus de 6 mois (une fois par ouverture).
-  setTimeout(async () => {
-    if (!S.canWrite) return;
-    try {
-      const old = await db.collection("log").where("at","<", Date.now() - 182*864e5).limit(50).get();
-      for (const d of old.docs){ await db.doc("log/" + d.id).delete().catch(()=>{}); }
-    } catch(e){}
-  }, 8000);
+  refresh(true);
+  if (!S.by) askName();
+  setInterval(() => { if (document.visibilityState === "visible") refresh(); }, 20000);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refresh(); });
 }
 start();
 })();
 </script>
+</body>
+</html>
