@@ -4,7 +4,7 @@
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Le bubus à gaga</title>
+<title>Le bubus à gaga les yeux bleus</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
@@ -46,7 +46,7 @@ button{cursor:pointer}
 header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
 header.top .wrap{display:flex;align-items:center;gap:12px;padding-block:10px}
 .brand{flex:1;min-width:0}
-.brand h1{margin:0;font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1;letter-spacing:.01em;text-transform:uppercase}
+.brand h1{margin:0;text-wrap:balance;font-family:var(--f-display);font-weight:700;font-size:26px;line-height:1;letter-spacing:.01em;text-transform:uppercase}
 .brand .sub{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
 .dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
@@ -209,7 +209,7 @@ nav.tabs button[aria-current="page"]{color:var(--accent);font-weight:600}
 <header class="top">
   <div class="wrap">
     <div class="brand">
-      <h1 id="vehName">Le bubus à gaga</h1>
+      <h1 id="vehName">Le bubus à gaga les yeux bleus</h1>
       <div class="sub"><span class="dot" id="syncDot"></span><span id="syncTxt">Connexion…</span></div>
     </div>
     <button class="icon-btn" id="btnSettings" aria-label="Réglages">
@@ -375,7 +375,7 @@ function render(){
   const n = S.items.filter(it => isLow(it) || needsTool(it)).length;
   const b = $("#buyBadge"); b.hidden = !n; b.textContent = n;
   $("#fab").hidden = !(isListView() && S.loaded);
-  $("#vehName").textContent = (S.config.vehicle || "Le bubus à gaga");
+  $("#vehName").textContent = (S.config.vehicle || "Le bubus à gaga les yeux bleus");
 }
 
 function renderSummary(){

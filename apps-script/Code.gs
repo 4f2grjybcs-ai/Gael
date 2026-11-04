@@ -25,7 +25,7 @@ var STATUSES = { camion: 'dans le camion', chantier: 'sur chantier', atelier: 'e
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
-    .setTitle('Le bubus à gaga')
+    .setTitle('Le bubus à gaga les yeux bleus')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover');
 }
 
