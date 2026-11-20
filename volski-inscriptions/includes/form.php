@@ -156,7 +156,8 @@ function volski_form_shortcode() {
 			<p class="volski-help">Tu peux t'inscrire dans plusieurs catégories.</p>
 			<div class="volski-choices">
 			<?php foreach ( volski_categories() as $k => $label ) : ?>
-				<label class="volski-choice"><input type="checkbox" name="categories[]" value="<?php echo esc_attr( $k ); ?>" <?php checked( in_array( $k, $cats_v, true ) ); ?> data-volski-cat="<?php echo esc_attr( $k ); ?>"> <?php echo esc_html( $label ); ?></label>
+				<?php $px = volski_prix_categorie( $k, $s ); ?>
+				<label class="volski-choice"><input type="checkbox" name="categories[]" value="<?php echo esc_attr( $k ); ?>" <?php checked( in_array( $k, $cats_v, true ) ); ?> data-volski-cat="<?php echo esc_attr( $k ); ?>" data-prix="<?php echo esc_attr( (string) (float) $px ); ?>"> <?php echo esc_html( $label ); ?><?php if ( null !== $px ) : ?> <span class="volski-price"><?php echo esc_html( volski_money( $px ) ); ?></span><?php endif; ?></label>
 			<?php endforeach; ?>
 			</div>
 			<?php echo $err( 'categories' ); // phpcs:ignore ?>
@@ -170,6 +171,39 @@ function volski_form_shortcode() {
 				<p class="volski-field"><label for="volski-urg-tel">Son téléphone *</label><input id="volski-urg-tel" type="tel" name="urgence_tel" required value="<?php echo esc_attr( $val( 'urgence_tel' ) ); ?>"<?php echo $aria( 'urgence_tel' ); // phpcs:ignore ?>><?php echo $err( 'urgence_tel' ); // phpcs:ignore ?></p>
 			</div>
 		</fieldset>
+
+		<?php
+		$opts   = volski_options( $s );
+		$opts_v = isset( $v['opt'] ) && is_array( $v['opt'] ) ? $v['opt'] : array();
+		if ( $opts ) :
+			?>
+		<fieldset>
+			<legend>Options</legend>
+			<div class="volski-opts">
+			<?php foreach ( $opts as $i => $o ) : ?>
+				<?php $q = isset( $opts_v[ $i ] ) ? min( absint( $opts_v[ $i ] ), $o['max'] ) : 0; ?>
+				<div class="volski-opt"<?php if ( $o['requires'] ) : ?> data-volski-requires="<?php echo esc_attr( $o['requires'] ); ?>"<?php endif; ?>>
+					<?php if ( 1 === $o['max'] ) : ?>
+						<label class="volski-check"><input type="checkbox" name="opt[<?php echo (int) $i; ?>]" value="1" data-volski-opt="<?php echo esc_attr( $o['label'] ); ?>" data-prix="<?php echo esc_attr( (string) $o['prix'] ); ?>" <?php checked( $q, 1 ); ?>> <span><?php echo esc_html( $o['label'] ); ?></span></label>
+					<?php else : ?>
+						<label for="volski-opt-<?php echo (int) $i; ?>"><?php echo esc_html( $o['label'] ); ?></label>
+						<input id="volski-opt-<?php echo (int) $i; ?>" class="volski-qty" type="number" inputmode="numeric" min="0" max="<?php echo (int) $o['max']; ?>" name="opt[<?php echo (int) $i; ?>]" value="<?php echo (int) $q; ?>" data-volski-opt="<?php echo esc_attr( $o['label'] ); ?>" data-prix="<?php echo esc_attr( (string) $o['prix'] ); ?>">
+					<?php endif; ?>
+					<span class="volski-price"><?php echo esc_html( volski_option_price_label( $o, true ) ); ?></span>
+					<?php if ( $o['requires'] ) : ?><span class="volski-help volski-req">Avec « <?php echo esc_html( $o['requires'] ); ?> » uniquement</span><?php endif; ?>
+				</div>
+			<?php endforeach; ?>
+			</div>
+		</fieldset>
+		<?php endif; ?>
+
+		<?php if ( volski_has_prices( $s ) ) : ?>
+		<div class="volski-total" aria-live="polite">
+			<span>Total à régler</span>
+			<strong data-volski-total>0 €</strong>
+			<small>Pas de paiement en ligne : l'organisation te recontacte pour finaliser le règlement.</small>
+		</div>
+		<?php endif; ?>
 
 		<p class="volski-field"><label for="volski-com">Commentaire</label><textarea id="volski-com" name="commentaire" rows="3"><?php echo esc_textarea( $val( 'commentaire' ) ); ?></textarea></p>
 
@@ -186,4 +220,20 @@ function volski_form_shortcode() {
 	</div>
 	<?php
 	return ob_get_clean();
+}
+
+/** Vrai si au moins une catégorie ou une option a un prix. */
+function volski_has_prices( $s = null ) {
+	$s = $s ?: volski_settings();
+	foreach ( volski_categories() as $k => $l ) {
+		if ( volski_prix_categorie( $k, $s ) ) {
+			return true;
+		}
+	}
+	foreach ( volski_options( $s ) as $o ) {
+		if ( $o['prix'] > 0 ) {
+			return true;
+		}
+	}
+	return false;
 }

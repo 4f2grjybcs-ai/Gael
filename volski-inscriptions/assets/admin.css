@@ -20,3 +20,27 @@
 .volski-admin .volski-intro{max-width:70ch}
 .volski-admin .column-categories{width:18%}
 .volski-admin .column-paiement,.volski-admin .column-created_at{width:10%}
+.volski-admin .volski-opts-admin{max-width:760px;margin-top:8px}
+.volski-admin .volski-opts-admin td{vertical-align:middle}
+.volski-admin h2{margin-top:28px}
+.volski-admin .volski-cta{background:#2271b1;color:#fff;border-color:#2271b1}
+.volski-admin .volski-cta:hover{background:#135e96;color:#fff}
+.volski-admin .volski-sub-inline{color:#646970;font-size:12px}
+.volski-grid-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.volski-grid-scroll{overflow-x:auto;max-height:70vh;border:1px solid #c3c4c7}
+.volski-grid{border:0;border-collapse:separate;border-spacing:0;min-width:900px}
+.volski-grid thead th,.volski-grid tfoot th{position:sticky;background:#f6f7f7;z-index:2;font-weight:600}
+.volski-grid thead th{top:0;border-bottom:1px solid #c3c4c7}
+.volski-grid tfoot th{bottom:0;border-top:2px solid #c3c4c7}
+.volski-grid td,.volski-grid th{vertical-align:middle;padding:8px 10px}
+.volski-grid .vg-name{position:sticky;left:0;background:#fff;z-index:1;min-width:170px;border-right:1px solid #dcdcde}
+.volski-grid thead .vg-name,.volski-grid tfoot .vg-name{z-index:3;background:#f6f7f7}
+.volski-grid .vg-opt,.volski-grid .vg-paid{text-align:center;min-width:90px}
+.volski-grid input[type=checkbox]{width:22px;height:22px}
+.volski-grid .vg-num{width:70px}
+.volski-grid .vg-money{text-align:right;width:84px}
+.volski-grid .vg-note{width:220px}
+.volski-grid .vg-total{text-align:right;white-space:nowrap}
+.volski-grid tr.is-changed td,.volski-grid tr.is-changed .vg-name{background:#fcf9e8}
+.volski-grid-save{position:sticky;bottom:0;background:#f0f0f1;padding:12px 0;margin:0;display:flex;align-items:center;gap:12px}
+#volski-dirty{color:#996800;font-weight:600}

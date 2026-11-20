@@ -156,7 +156,18 @@ class Volski_List_Table extends WP_List_Table {
 
 	protected function column_paiement( $r ) {
 		$paid = 'paye' === $r['paiement'];
-		return '<span class="volski-pay ' . ( $paid ? 'is-paid' : 'is-due' ) . '">' . esc_html( volski_paiements()[ $r['paiement'] ] ?? $r['paiement'] ) . '</span>';
+		$out = '<span class="volski-pay ' . ( $paid ? 'is-paid' : 'is-due' ) . '">' . esc_html( volski_paiements()[ $r['paiement'] ] ?? $r['paiement'] ) . '</span>';
+		if ( $paid && '' !== $r['paiement_mode'] ) {
+			$out .= ' <span class="volski-sub-inline">' . esc_html( volski_modes()[ $r['paiement_mode'] ] ?? '' ) . '</span>';
+		}
+		if ( (float) $r['total'] > 0 ) {
+			$out .= '<span class="volski-sub">' . esc_html( volski_money( $r['total'] ) ) . '</span>';
+		}
+		$opts = volski_options_label( $r['options_choisies'] );
+		if ( '' !== $opts ) {
+			$out .= '<span class="volski-sub">' . esc_html( $opts ) . '</span>';
+		}
+		return $out;
 	}
 
 	protected function column_created_at( $r ) {

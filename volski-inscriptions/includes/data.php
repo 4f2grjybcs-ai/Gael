@@ -33,6 +33,21 @@ function volski_sexes() {
 	);
 }
 
+/** Moyens de paiement (clé => libellé). */
+function volski_modes() {
+	return apply_filters(
+		'volski_modes',
+		array(
+			'virement' => 'Virement',
+			'especes'  => 'Espèces',
+			'cheque'   => 'Chèque',
+			'carte'    => 'Carte',
+			'twint'    => 'Twint',
+			'autre'    => 'Autre',
+		)
+	);
+}
+
 /** Statuts de paiement (clé => libellé). */
 function volski_paiements() {
 	return array(
@@ -45,7 +60,21 @@ function volski_paiements() {
 function volski_settings() {
 	$defaults = array(
 		'competition'     => 'Compétition Vol & Ski',
+		'date_txt'        => '',
+		'lieu'            => '',
+		'adresse'         => '',
+		'image_url'       => '',
+		'presentation'    => '',
+		'programme'       => '',
 		'infos'           => '',
+		'contact'         => '',
+		'prix'            => array(),
+		'tarif_note'      => '',
+		'options'         => array(
+			array( 'label' => 'Abonnement télécabine', 'prix' => '', 'max' => 1, 'requires' => '' ),
+			array( 'label' => 'Souper', 'prix' => '', 'max' => 1, 'requires' => '' ),
+			array( 'label' => '+1 au souper (accompagnant)', 'prix' => '', 'max' => 1, 'requires' => 'Souper' ),
+		),
 		'ouvert'          => 1,
 		'email_orga'      => get_option( 'admin_email' ),
 		'message_confirm' => "Merci pour ton inscription !\nNous te recontacterons prochainement pour finaliser le paiement.",
@@ -101,6 +130,9 @@ function volski_validate( $raw, $public = true ) {
 		'commentaire'    => isset( $raw['commentaire'] ) ? mb_substr( sanitize_textarea_field( $raw['commentaire'] ), 0, 1000 ) : '',
 		'afficher_public' => ! empty( $raw['afficher_public'] ) ? 1 : 0,
 	);
+	$picked                  = volski_pick_options( isset( $raw['opt'] ) && is_array( $raw['opt'] ) ? $raw['opt'] : array() );
+	$data['options_choisies'] = wp_json_encode( $picked );
+	$data['total']            = volski_total( $data['categories'], $picked );
 
 	$errors = array();
 	if ( '' === $data['prenom'] ) {
@@ -131,4 +163,96 @@ function volski_validate( $raw, $public = true ) {
 		$errors['rgpd'] = 'Coche cette case pour valider ton inscription.';
 	}
 	return array( $data, $errors );
+}
+
+
+/** Prix d'une catégorie (float), ou null si aucun prix n'est fixé. */
+function volski_prix_categorie( $key, $s = null ) {
+	$s = $s ?: volski_settings();
+	$v = isset( $s['prix'][ $key ] ) ? trim( (string) $s['prix'][ $key ] ) : '';
+	return '' === $v ? null : (float) str_replace( ',', '.', $v );
+}
+
+/** Options proposées : liste de [ label, prix (float), max (int) ]. */
+function volski_options( $s = null ) {
+	$s   = $s ?: volski_settings();
+	$out = array();
+	foreach ( (array) $s['options'] as $o ) {
+		if ( ! empty( $o['label'] ) ) {
+			$raw   = trim( (string) ( $o['prix'] ?? '' ) );
+			$out[] = array(
+				'label'    => (string) $o['label'],
+				'prix'     => (float) str_replace( ',', '.', $raw ),
+				'has_prix' => '' !== $raw,
+				'max'      => max( 1, (int) ( $o['max'] ?? 1 ) ),
+				'requires' => (string) ( $o['requires'] ?? '' ),
+			);
+		}
+	}
+	return $out;
+}
+
+/** Montant lisible : 45 € ou 45,50 €. */
+function volski_money( $v ) {
+	$v = (float) $v;
+	return ( floor( $v ) == $v ? number_format( $v, 0, ',', ' ' ) : number_format( $v, 2, ',', ' ' ) ) . ' €'; // phpcs:ignore Universal.Operators.StrictComparisons
+}
+
+/**
+ * Options choisies (quantités envoyées par le formulaire, indexées comme volski_options()).
+ * Retourne la liste figée [ label, prix, qty ] : le prix reste celui du jour de l'inscription.
+ */
+function volski_pick_options( $raw ) {
+	$opts  = volski_options();
+	$qty   = array();
+	foreach ( $opts as $i => $o ) {
+		$qty[ $i ] = min( isset( $raw[ $i ] ) ? absint( $raw[ $i ] ) : 0, $o['max'] );
+	}
+	// Une option qui dépend d'une autre (ex. « +1 au souper ») n'est gardée que si l'autre est choisie.
+	$labels = array();
+	foreach ( $opts as $i => $o ) {
+		if ( $qty[ $i ] > 0 ) {
+			$labels[ $o['label'] ] = true;
+		}
+	}
+	$picked = array();
+	foreach ( $opts as $i => $o ) {
+		if ( $qty[ $i ] > 0 && ( '' === $o['requires'] || isset( $labels[ $o['requires'] ] ) ) ) {
+			$picked[] = array( 'label' => $o['label'], 'prix' => $o['prix'], 'qty' => $qty[ $i ] );
+		}
+	}
+	return $picked;
+}
+
+/** Total : prix des catégories cochées + options. */
+function volski_total( $categories_csv, $picked ) {
+	$t = 0.0;
+	foreach ( array_filter( explode( ',', (string) $categories_csv ) ) as $k ) {
+		$t += (float) volski_prix_categorie( $k );
+	}
+	foreach ( (array) $picked as $o ) {
+		$t += (float) $o['prix'] * (int) $o['qty'];
+	}
+	return round( $t, 2 );
+}
+
+/** Options stockées (JSON) en texte : « Repas ×2, T-shirt ». */
+function volski_options_label( $json ) {
+	$list = json_decode( (string) $json, true );
+	$out  = array();
+	foreach ( (array) $list as $o ) {
+		$out[] = $o['label'] . ( (int) $o['qty'] > 1 ? ' ×' . (int) $o['qty'] : '' );
+	}
+	return implode( ', ', $out );
+}
+
+/** Prix d'une option à afficher : « 15 € », « Gratuit », ou rien si aucun prix n'est fixé. */
+function volski_option_price_label( $o, $unit = false ) {
+	if ( empty( $o['has_prix'] ) ) {
+		return '';
+	}
+	if ( $o['prix'] <= 0 ) {
+		return 'Gratuit';
+	}
+	return volski_money( $o['prix'] ) . ( $unit && $o['max'] > 1 ? ' / unité' : '' );
 }

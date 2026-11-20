@@ -31,3 +31,60 @@
 .volski-table-wrap{overflow-x:auto}
 .volski-table{width:100%;border-collapse:collapse}
 .volski-table th,.volski-table td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--vs-line)}
+
+/* Prix et options dans le formulaire */
+.volski-price{font-weight:600;opacity:.75;font-size:.9em;font-variant-numeric:tabular-nums}
+.volski-opts{display:flex;flex-direction:column;gap:10px}
+.volski-opt{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 0;border-bottom:1px dashed var(--vs-line)}
+.volski-opt:last-child{border-bottom:0}
+.volski-opt > label{flex:1;min-width:0;font-weight:600}
+.volski-opt .volski-check{font-weight:600;align-items:center}
+.volski-opt .volski-check input{margin-top:0}
+.volski .volski-qty{width:84px;min-height:44px;padding:8px 10px;border:1px solid var(--vs-line);border-radius:8px;font:inherit;color:inherit;background:transparent}
+.volski-total{display:grid;grid-template-columns:1fr auto;align-items:baseline;gap:4px 12px;border:2px solid var(--vs-accent);border-radius:10px;padding:14px 18px}
+.volski-total span{font-weight:700}
+.volski-total strong{font-size:1.6em;font-variant-numeric:tabular-nums;line-height:1}
+.volski-total small{grid-column:1/-1;opacity:.75}
+
+/* Page de l'événement */
+.volski.volski-event{max-width:none}
+.volski-event > .volski-sec,.volski-event .volski-sec-form > .volski{max-width:760px}
+.volski-hero{position:relative;border-radius:14px;overflow:hidden;color:#fff;background:#183a52;background-image:linear-gradient(135deg,#183a52 0%,#2c6e91 60%,#7fb6d4 100%);margin:0 0 32px}
+.volski-hero.has-image{background-image:linear-gradient(180deg,rgba(8,20,30,.25) 0%,rgba(8,20,30,.78) 100%),var(--volski-hero);background-size:cover;background-position:center}
+.volski-hero-inner{padding:clamp(28px,6vw,64px) clamp(20px,5vw,48px) clamp(24px,5vw,40px);min-height:clamp(260px,42vw,420px);display:flex;flex-direction:column;justify-content:flex-end;gap:14px}
+.volski-kicker{margin:0;text-transform:uppercase;letter-spacing:.14em;font-size:.8em;font-weight:700;opacity:.85}
+.volski-title{margin:0;color:#fff;font-size:clamp(1.9em,5.5vw,3.2em);line-height:1.05;text-wrap:balance}
+.volski-facts{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px 22px}
+.volski-facts li{margin:0;font-weight:600;font-size:1.05em}
+.volski-facts span{display:block;font-size:.72em;text-transform:uppercase;letter-spacing:.1em;opacity:.75;font-weight:700}
+.volski-btn-hero{align-self:flex-start;margin-top:8px;background:#fff;color:#183a52;text-decoration:none;display:inline-flex;align-items:center}
+.volski-btn-hero:hover,.volski-btn-hero:focus{color:#183a52;filter:none;box-shadow:0 0 0 3px rgba(255,255,255,.45)}
+.volski-closed{margin:8px 0 0;font-weight:700;background:rgba(255,255,255,.18);padding:8px 14px;border-radius:8px;align-self:flex-start}
+.volski-sec{margin:0 0 36px}
+.volski-sec h3{margin:0 0 14px;font-size:1.35em}
+.volski-intro{font-size:1.1em;line-height:1.6}
+.volski-day{margin:18px 0 8px;font-size:1em;text-transform:uppercase;letter-spacing:.08em;opacity:.8}
+.volski-day:first-child{margin-top:0}
+.volski-prog{list-style:none;margin:0;padding:0;border-left:2px solid var(--vs-accent)}
+.volski-prog li{display:grid;grid-template-columns:90px 1fr;gap:12px;margin:0;padding:8px 0 8px 16px;position:relative}
+.volski-prog li::before{content:"";position:absolute;left:-6px;top:15px;width:10px;height:10px;border-radius:50%;background:var(--vs-accent)}
+.volski-time{font-weight:700;font-variant-numeric:tabular-nums}
+@media (max-width:480px){.volski-prog li{grid-template-columns:1fr;gap:2px}}
+.volski-info-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:640px){.volski-info-grid{grid-template-columns:1fr}}
+.volski-info-text > :first-child{margin-top:0}
+.volski-info-side{margin:0;border:1px solid var(--vs-line);border-radius:10px;padding:16px 18px;background:var(--vs-soft)}
+.volski-info-side dt{font-size:.75em;text-transform:uppercase;letter-spacing:.1em;font-weight:700;opacity:.7;margin:0}
+.volski-info-side dd{margin:2px 0 14px}
+.volski-info-side dd:last-child{margin-bottom:0}
+.volski-prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:0 0 12px}
+.volski-price-card{border:1px solid var(--vs-line);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:4px}
+.volski-price-card span{font-weight:600}
+.volski-price-card strong{font-size:1.8em;line-height:1;color:var(--vs-accent);font-variant-numeric:tabular-nums}
+.volski-sub-h{margin:20px 0 8px;font-size:1em}
+.volski-opt-list{list-style:none;margin:0 0 12px;padding:0}
+.volski-opt-list li{display:flex;align-items:baseline;gap:8px;margin:0;padding:6px 0}
+.volski-dots{flex:1;border-bottom:1px dotted var(--vs-line);transform:translateY(-4px)}
+.volski-opt-list strong{font-variant-numeric:tabular-nums}
+.volski-sec-form{scroll-margin-top:80px}
+.volski-opt .volski-req{flex-basis:100%;margin-top:-4px}

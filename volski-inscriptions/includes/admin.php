@@ -9,6 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once VOLSKI_DIR . 'includes/admin-list.php';
+require_once VOLSKI_DIR . 'includes/admin-grid.php';
 
 add_action( 'admin_menu', 'volski_admin_menu' );
 add_action( 'admin_enqueue_scripts', 'volski_admin_assets' );
@@ -23,6 +24,7 @@ add_action( 'admin_post_volski_comite_remove', 'volski_admin_comite_remove' );
 function volski_admin_menu() {
 	add_menu_page( 'Vol & Ski', 'Vol & Ski', VOLSKI_CAP, 'volski', 'volski_page_inscriptions', 'dashicons-groups', 26 );
 	add_submenu_page( 'volski', 'Inscriptions', 'Inscriptions', VOLSKI_CAP, 'volski', 'volski_page_inscriptions' );
+	add_submenu_page( 'volski', 'Tableau de suivi', 'Tableau de suivi', VOLSKI_CAP, 'volski-suivi', 'volski_page_grid' );
 	add_submenu_page( 'volski', 'Infos compétition', 'Infos compétition', VOLSKI_CAP, 'volski-infos', 'volski_page_settings' );
 	add_submenu_page( 'volski', 'Comité', 'Comité', 'manage_options', 'volski-comite', 'volski_page_comite' );
 }
@@ -54,6 +56,7 @@ function volski_admin_notice() {
 		'paid'     => 'Statut de paiement mis à jour.',
 		'settings' => 'Infos enregistrées.',
 		'bulk'     => 'Inscriptions mises à jour.',
+		'grid'     => 'Modifications enregistrées.',
 		'member'   => 'Membre ajouté. Il a reçu un e-mail pour choisir son mot de passe.',
 		'member_pw' => 'Compte créé avec le mot de passe choisi. Il peut se connecter tout de suite.',
 		'removed'  => 'Membre retiré du comité.',
@@ -75,12 +78,23 @@ function volski_counts() {
 	$out = array(
 		'total' => (int) $wpdb->get_var( "SELECT COUNT(*) FROM $t" ), // phpcs:ignore
 		'paye'  => (int) $wpdb->get_var( "SELECT COUNT(*) FROM $t WHERE paiement = 'paye'" ), // phpcs:ignore
+		'du'    => (float) $wpdb->get_var( "SELECT SUM(total) FROM $t" ), // phpcs:ignore
+		'recu'  => (float) $wpdb->get_var( "SELECT SUM(total) FROM $t WHERE paiement = 'paye'" ), // phpcs:ignore
 	);
 	foreach ( volski_sexes() as $k => $l ) {
 		$out[ $k ] = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $t WHERE sexe = %s", $k ) ); // phpcs:ignore
 	}
 	foreach ( volski_categories() as $k => $l ) {
 		$out[ $k ] = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM $t WHERE CONCAT(',', categories, ',') LIKE %s", '%,' . $k . ',%' ) ); // phpcs:ignore
+	}
+	$out['opts'] = array();
+	$all         = $wpdb->get_col( "SELECT options_choisies FROM $t" ); // phpcs:ignore
+	foreach ( volski_options() as $o ) {
+		$q = 0;
+		foreach ( $all as $json ) {
+			$q += volski_opt_qty( $json, $o['label'] );
+		}
+		$out['opts'][ $o['label'] ] = $q;
 	}
 	return $out;
 }
@@ -103,6 +117,7 @@ function volski_page_inscriptions() {
 	?>
 	<div class="wrap volski-admin">
 		<h1 class="wp-heading-inline"><?php echo esc_html( $s['competition'] ); ?></h1>
+		<a href="<?php echo esc_url( admin_url( 'admin.php?page=volski-suivi' ) ); ?>" class="page-title-action volski-cta">Tableau de suivi (payé, souper…)</a>
 		<a href="<?php echo esc_url( admin_url( 'admin.php?page=volski&action=new' ) ); ?>" class="page-title-action">Ajouter une inscription</a>
 		<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( volski_current_filters(), admin_url( 'admin-post.php?action=volski_export' ) ), 'volski_export' ) ); ?>" class="page-title-action">Exporter pour Excel</a>
 		<hr class="wp-header-end">
@@ -117,6 +132,12 @@ function volski_page_inscriptions() {
 				<div class="volski-stat"><b><?php echo (int) $c[ $k ]; ?></b><span><?php echo esc_html( $l . ( $c[ $k ] > 1 ? 's' : '' ) ); ?></span></div>
 			<?php endforeach; ?>
 			<div class="volski-stat volski-stat-pay"><b><?php echo (int) $c['paye']; ?><small> / <?php echo (int) $c['total']; ?></small></b><span>payé<?php echo $c['paye'] > 1 ? 's' : ''; ?></span></div>
+			<?php foreach ( $c['opts'] as $label => $q ) : ?>
+				<div class="volski-stat"><b><?php echo (int) $q; ?></b><span><?php echo esc_html( $label ); ?></span></div>
+			<?php endforeach; ?>
+			<?php if ( $c['du'] > 0 ) : ?>
+			<div class="volski-stat volski-stat-pay"><b><?php echo esc_html( volski_money( $c['recu'] ) ); ?><small> / <?php echo esc_html( volski_money( $c['du'] ) ); ?></small></b><span>encaissés</span></div>
+			<?php endif; ?>
 			<div class="volski-stat"><b class="<?php echo $s['ouvert'] ? 'is-open' : 'is-closed'; ?>"><?php echo $s['ouvert'] ? 'Ouvertes' : 'Fermées'; ?></b><span>inscriptions</span></div>
 		</div>
 
@@ -194,6 +215,19 @@ function volski_page_edit( $id ) {
 						<label class="volski-radio"><input type="radio" name="paiement" value="<?php echo esc_attr( $k ); ?>" <?php checked( $r['paiement'], $k ); ?>> <?php echo esc_html( $l ); ?></label>
 					<?php endforeach; ?>
 				</fieldset></td></tr>
+				<tr><th scope="row"><label for="vs-mode">Moyen de paiement</label></th><td><select id="vs-mode" name="paiement_mode"><option value="">—</option><?php foreach ( volski_modes() as $k => $l ) : ?><option value="<?php echo esc_attr( $k ); ?>" <?php selected( $r['paiement_mode'] ?? '', $k ); ?>><?php echo esc_html( $l ); ?></option><?php endforeach; ?></select></td></tr>
+				<?php if ( $id ) : ?>
+				<tr><th scope="row">Options choisies</th><td><?php echo esc_html( volski_options_label( $r['options_choisies'] ?? '' ) ?: 'Aucune' ); ?></td></tr>
+				<tr><th scope="row"><label for="vs-total">Total à régler</label></th><td><input id="vs-total" name="total" class="small-text" inputmode="decimal" value="<?php echo esc_attr( number_format( (float) ( $r['total'] ?? 0 ), 2, ',', '' ) ); ?>"> €<p class="description">Calculé à l'inscription. Tu peux le corriger (remise, option ajoutée…).</p></td></tr>
+				<?php else : ?>
+				<tr><th scope="row">Options</th><td>
+					<?php foreach ( volski_options() as $i => $o ) : ?>
+						<label class="volski-radio"><?php echo esc_html( $o['label'] ); ?> <input type="number" min="0" max="<?php echo (int) $o['max']; ?>" name="opt[<?php echo (int) $i; ?>]" value="0" class="small-text"></label>
+					<?php endforeach; ?>
+					<?php if ( ! volski_options() ) : ?>Aucune option définie.<?php endif; ?>
+					<p class="description">Le total est calculé automatiquement à l'enregistrement.</p>
+				</td></tr>
+				<?php endif; ?>
 				<tr><th scope="row"><label for="vs-note">Note du comité</label></th><td><textarea id="vs-note" name="note_admin" rows="4" class="large-text" placeholder="Visible uniquement par le comité : relances, échanges, remarques…"><?php echo esc_textarea( $r['note_admin'] ); ?></textarea></td></tr>
 			</table>
 			<h2>Participant</h2>
@@ -245,11 +279,16 @@ function volski_admin_save() {
 	}
 	$pay                = sanitize_key( $_POST['paiement'] ?? 'a_payer' );
 	$data['paiement']   = isset( volski_paiements()[ $pay ] ) ? $pay : 'a_payer';
+	$mode                  = sanitize_key( $_POST['paiement_mode'] ?? '' );
+	$data['paiement_mode'] = isset( volski_modes()[ $mode ] ) ? $mode : '';
 	$data['note_admin'] = mb_substr( sanitize_textarea_field( wp_unslash( $_POST['note_admin'] ?? '' ) ), 0, 2000 );
 	if ( ! isset( volski_sexes()[ $data['sexe'] ] ) ) {
 		$data['sexe'] = '';
 	}
 	if ( $id ) {
+		// Les options restent celles choisies à l'inscription ; seul le total peut être corrigé.
+		unset( $data['options_choisies'] );
+		$data['total'] = max( 0, round( (float) str_replace( array( ',', ' ', '€' ), array( '.', '', '' ), (string) wp_unslash( $_POST['total'] ?? '0' ) ), 2 ) );
 		$wpdb->update( volski_table(), $data, array( 'id' => $id ) );
 		volski_back( array( 'action' => 'edit', 'id' => $id, 'msg' => 'saved' ) );
 	}
@@ -298,7 +337,12 @@ function volski_admin_export() {
 	foreach ( $cats as $l ) {
 		$head[] = $l;
 	}
-	$head = array_merge( $head, array( 'Passager biplace', 'E-mail', 'Téléphone', 'Contact d\'urgence', 'Tél. d\'urgence', 'Paiement', 'Liste publique', 'Commentaire', 'Note du comité' ) );
+	$head = array_merge( $head, array( 'Passager biplace', 'E-mail', 'Téléphone', 'Contact d\'urgence', 'Tél. d\'urgence', 'Options' ) );
+	$opts = volski_options();
+	foreach ( $opts as $o ) {
+		$head[] = $o['label'];
+	}
+	$head = array_merge( $head, array( 'Total (€)', 'Paiement', 'Moyen de paiement', 'Liste publique', 'Commentaire', 'Note du comité' ) );
 	fputcsv( $out, $head, ';' );
 	// Une cellule qui commence par = + - @ serait lue comme une formule par Excel : on la neutralise.
 	$cell = function ( $v ) {
@@ -311,7 +355,12 @@ function volski_admin_export() {
 		foreach ( $cats as $k => $l ) {
 			$line[] = in_array( $k, $mine, true ) ? 'Oui' : '';
 		}
-		$line = array_merge( $line, array( $r['passager'], $r['email'], $r['telephone'], $r['urgence_nom'], $r['urgence_tel'], volski_paiements()[ $r['paiement'] ] ?? $r['paiement'], $r['afficher_public'] ? 'Oui' : 'Non', $r['commentaire'], $r['note_admin'] ) );
+		$line = array_merge( $line, array( $r['passager'], $r['email'], $r['telephone'], $r['urgence_nom'], $r['urgence_tel'], volski_options_label( $r['options_choisies'] ) ) );
+		foreach ( $opts as $o ) {
+			$q      = volski_opt_qty( $r['options_choisies'], $o['label'] );
+			$line[] = $q ? ( 1 === $o['max'] ? 'Oui' : $q ) : '';
+		}
+		$line = array_merge( $line, array( number_format( (float) $r['total'], 2, ',', '' ), volski_paiements()[ $r['paiement'] ] ?? $r['paiement'], volski_modes()[ $r['paiement_mode'] ] ?? '', $r['afficher_public'] ? 'Oui' : 'Non', $r['commentaire'], $r['note_admin'] ) );
 		fputcsv( $out, array_map( $cell, $line ), ';' );
 	}
 	fclose( $out );
@@ -328,14 +377,82 @@ function volski_page_settings() {
 	?>
 	<div class="wrap volski-admin">
 		<h1>Infos compétition</h1>
+		<p class="volski-intro">Tout ce qui s'affiche sur la page de l'événement. Les champs laissés vides ne sont pas affichés.</p>
 		<?php volski_admin_notice(); ?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="volski_settings">
 			<?php wp_nonce_field( 'volski_settings' ); ?>
+			<h2>La page de l'événement</h2>
 			<table class="form-table" role="presentation">
 				<tr><th scope="row"><label for="vs-comp">Nom de la compétition</label></th><td><input id="vs-comp" name="competition" class="regular-text" value="<?php echo esc_attr( $s['competition'] ); ?>"></td></tr>
-				<tr><th scope="row">Inscriptions</th><td><label><input type="checkbox" name="ouvert" value="1" <?php checked( $s['ouvert'], 1 ); ?>> Ouvertes (décocher pour fermer le formulaire)</label></td></tr>
-				<tr><th scope="row"><label for="vs-infos">Infos pratiques</label></th><td><textarea id="vs-infos" name="infos" rows="5" class="large-text" placeholder="Dates, lieu, horaires du briefing, matériel obligatoire…"><?php echo esc_textarea( $s['infos'] ); ?></textarea><p class="description">Ajoutées à la fin de l'e-mail de confirmation envoyé aux participants.</p></td></tr>
+				<tr><th scope="row"><label for="vs-date">Dates</label></th><td><input id="vs-date" name="date_txt" class="regular-text" value="<?php echo esc_attr( $s['date_txt'] ); ?>" placeholder="ex. Samedi 13 et dimanche 14 mars 2027"></td></tr>
+				<tr><th scope="row"><label for="vs-lieu">Lieu</label></th><td><input id="vs-lieu" name="lieu" class="regular-text" value="<?php echo esc_attr( $s['lieu'] ); ?>" placeholder="ex. Station de La Clusaz"></td></tr>
+				<tr><th scope="row"><label for="vs-img">Photo de la bannière</label></th><td><input id="vs-img" type="url" name="image_url" class="large-text" value="<?php echo esc_attr( $s['image_url'] ); ?>" placeholder="https://…/photo.jpg"><p class="description">Adresse d'une photo (format paysage). Pour une photo de la médiathèque : clic sur l'image, puis « Copier l'URL ». Laisse vide pour un bandeau de couleur.</p></td></tr>
+				<tr><th scope="row"><label for="vs-pres">Présentation</label></th><td><textarea id="vs-pres" name="presentation" rows="5" class="large-text" placeholder="Quelques lignes pour donner envie : l'esprit de la compétition, les épreuves, le niveau attendu…"><?php echo esc_textarea( $s['presentation'] ); ?></textarea></td></tr>
+				<tr><th scope="row"><label for="vs-prog">Programme</label></th><td><textarea id="vs-prog" name="programme" rows="8" class="large-text" placeholder="# Samedi 13 mars&#10;7h30 : Accueil et retrait des dossards&#10;8h30 : Briefing&#10;9h00 : Première manche&#10;# Dimanche 14 mars&#10;9h00 : Finales&#10;17h00 : Remise des prix"><?php echo esc_textarea( $s['programme'] ); ?></textarea><p class="description">Une ligne par moment, sous la forme « heure : activité ». Une ligne qui commence par # crée un titre de jour.</p></td></tr>
+				<tr><th scope="row"><label for="vs-infos">Infos pratiques</label></th><td><textarea id="vs-infos" name="infos" rows="5" class="large-text" placeholder="Matériel obligatoire, forfait, hébergement, météo, repli en cas de mauvais temps…"><?php echo esc_textarea( $s['infos'] ); ?></textarea><p class="description">Affichées sur la page et ajoutées à l'e-mail de confirmation.</p></td></tr>
+				<tr><th scope="row"><label for="vs-adr">Adresse du rendez-vous</label></th><td><textarea id="vs-adr" name="adresse" rows="2" class="large-text" placeholder="ex. Parking du télésiège de l'Étale, 74220 La Clusaz"><?php echo esc_textarea( $s['adresse'] ); ?></textarea><p class="description">Un lien « Voir sur la carte » est ajouté automatiquement.</p></td></tr>
+				<tr><th scope="row"><label for="vs-contact">Contact</label></th><td><textarea id="vs-contact" name="contact" rows="2" class="large-text" placeholder="ex. Julien – 06 12 34 56 78"><?php echo esc_textarea( $s['contact'] ); ?></textarea></td></tr>
+			</table>
+
+			<h2>Tarifs</h2>
+			<table class="form-table" role="presentation">
+				<?php foreach ( volski_categories() as $k => $l ) : ?>
+				<tr><th scope="row"><label for="vs-prix-<?php echo esc_attr( $k ); ?>"><?php echo esc_html( $l ); ?></label></th><td><input id="vs-prix-<?php echo esc_attr( $k ); ?>" name="prix[<?php echo esc_attr( $k ); ?>]" class="small-text" inputmode="decimal" value="<?php echo esc_attr( $s['prix'][ $k ] ?? '' ); ?>"> €</td></tr>
+				<?php endforeach; ?>
+				<tr><th scope="row"><label for="vs-tnote">Précision</label></th><td><input id="vs-tnote" name="tarif_note" class="large-text" value="<?php echo esc_attr( $s['tarif_note'] ); ?>" placeholder="ex. Forfait de ski non compris. Inscription dans plusieurs catégories : les prix s'additionnent."><p class="description">Laisse un prix vide pour ne pas l'afficher. Un participant inscrit dans plusieurs catégories paie la somme des prix.</p></td></tr>
+			</table>
+
+			<h2>Options</h2>
+			<p class="description">Ce que les participants peuvent ajouter à leur inscription. « Max » = quantité maximale par personne (1 = une case à cocher). « Seulement avec » : l'option n'est proposée que si l'autre est choisie (ex. « +1 au souper » seulement avec « Souper »). Prix vide = pas de prix affiché ; 0 = « Gratuit ».</p>
+			<table class="widefat volski-opts-admin" id="volski-opts">
+				<thead><tr><th>Option</th><th>Prix (€)</th><th>Max</th><th>Seulement avec</th><th></th></tr></thead>
+				<tbody>
+				<?php
+				$rows = array_values( (array) $s['options'] );
+				$rows[] = array( 'label' => '', 'prix' => '', 'max' => 1, 'requires' => '' );
+				$parents = array_filter( wp_list_pluck( (array) $s['options'], 'label' ) );
+				foreach ( $rows as $i => $o ) :
+					?>
+					<tr>
+						<td><input name="options[<?php echo (int) $i; ?>][label]" class="regular-text" value="<?php echo esc_attr( $o['label'] ?? '' ); ?>" placeholder="ex. Repas du samedi soir"></td>
+						<td><input name="options[<?php echo (int) $i; ?>][prix]" class="small-text" inputmode="decimal" value="<?php echo esc_attr( $o['prix'] ?? '' ); ?>"></td>
+						<td><input name="options[<?php echo (int) $i; ?>][max]" type="number" min="1" max="20" class="small-text" value="<?php echo esc_attr( $o['max'] ?? 1 ); ?>"></td>
+						<td><select name="options[<?php echo (int) $i; ?>][requires]"><option value="">—</option>
+							<?php foreach ( $parents as $pl ) : ?>
+								<?php if ( $pl !== ( $o['label'] ?? '' ) ) : ?><option value="<?php echo esc_attr( $pl ); ?>" <?php selected( $o['requires'] ?? '', $pl ); ?>><?php echo esc_html( $pl ); ?></option><?php endif; ?>
+							<?php endforeach; ?>
+						</select></td>
+						<td><button type="button" class="button-link volski-opt-del">Retirer</button></td>
+					</tr>
+				<?php endforeach; ?>
+				</tbody>
+			</table>
+			<p><button type="button" class="button" id="volski-opt-add">+ Ajouter une option</button></p>
+			<script>
+			(function () {
+				var tb = document.querySelector('#volski-opts tbody');
+				document.getElementById('volski-opt-add').addEventListener('click', function () {
+					var last = tb.lastElementChild, row = last.cloneNode(true), n = tb.children.length;
+					row.querySelectorAll('input').forEach(function (i) {
+						i.name = i.name.replace(/options\[\d+\]/, 'options[' + n + ']');
+						i.value = i.name.indexOf('[max]') > 0 ? 1 : '';
+					});
+					row.querySelectorAll('select').forEach(function (sel) { sel.name = sel.name.replace(/options\[\d+\]/, 'options[' + n + ']'); sel.value = ''; });
+					tb.appendChild(row);
+					row.querySelector('input').focus();
+				});
+				tb.addEventListener('click', function (e) {
+					if (!e.target.classList.contains('volski-opt-del')) return;
+					var tr = e.target.closest('tr');
+					if (tb.children.length > 1) tr.remove(); else tr.querySelectorAll('input').forEach(function (i) { i.value = i.name.indexOf('[max]') > 0 ? 1 : ''; });
+				});
+			})();
+			</script>
+
+			<h2>Inscriptions</h2>
+			<table class="form-table" role="presentation">
+				<tr><th scope="row">État</th><td><label><input type="checkbox" name="ouvert" value="1" <?php checked( $s['ouvert'], 1 ); ?>> Inscriptions ouvertes (décocher pour fermer le formulaire)</label></td></tr>
 				<tr><th scope="row"><label for="vs-msg">Message de confirmation</label></th><td><textarea id="vs-msg" name="message_confirm" rows="4" class="large-text"><?php echo esc_textarea( $s['message_confirm'] ); ?></textarea><p class="description">Début de l'e-mail reçu par chaque participant, suivi du récapitulatif de son inscription.</p></td></tr>
 				<tr><th scope="row"><label for="vs-mail">E-mail de l'organisation</label></th><td><input id="vs-mail" type="email" name="email_orga" class="regular-text" value="<?php echo esc_attr( $s['email_orga'] ); ?>"><p class="description">Reçoit une alerte à chaque inscription. Les participants qui répondent à leur e-mail écrivent à cette adresse.</p></td></tr>
 				<tr><th scope="row"><label for="vs-regl">Lien du règlement</label></th><td><input id="vs-regl" type="url" name="reglement_url" class="regular-text" value="<?php echo esc_attr( $s['reglement_url'] ); ?>" placeholder="https://…"><p class="description">Facultatif. Affiché dans la case à cocher du formulaire.</p></td></tr>
@@ -345,8 +462,8 @@ function volski_page_settings() {
 		</form>
 		<?php if ( current_user_can( 'manage_options' ) ) : ?>
 		<h2>Afficher sur le site</h2>
-		<p>Colle ces codes dans une page (bloc « Code court ») :</p>
-		<p><code>[volski_inscription]</code> : le formulaire d'inscription<br><code>[volski_inscrits]</code> : la liste publique des inscrits</p>
+		<p>Colle un de ces codes dans une page (bloc « Code court ») :</p>
+		<p><code>[volski_evenement]</code> : la page complète de l'événement (bannière, programme, infos, tarifs et formulaire)<br><code>[volski_inscription]</code> : le formulaire seul<br><code>[volski_inscrits]</code> : la liste publique des inscrits</p>
 		<?php endif; ?>
 	</div>
 	<?php
@@ -355,8 +472,37 @@ function volski_page_settings() {
 function volski_admin_save_settings() {
 	volski_check( 'volski_settings' );
 	$p = wp_unslash( $_POST );
+	$prix = array();
+	foreach ( volski_categories() as $k => $l ) {
+		$v          = trim( str_replace( array( ' ', '€' ), '', (string) ( $p['prix'][ $k ] ?? '' ) ) );
+		$prix[ $k ] = '' === $v ? '' : (string) max( 0, round( (float) str_replace( ',', '.', $v ), 2 ) );
+	}
+	$options = array();
+	foreach ( (array) ( $p['options'] ?? array() ) as $o ) {
+		$label = sanitize_text_field( $o['label'] ?? '' );
+		if ( '' === $label ) {
+			continue;
+		}
+		$praw      = trim( str_replace( array( ' ', '€' ), '', (string) ( $o['prix'] ?? '' ) ) );
+		$options[] = array(
+			'label'    => mb_substr( $label, 0, 80 ),
+			'prix'     => '' === $praw ? '' : (string) max( 0, round( (float) str_replace( ',', '.', $praw ), 2 ) ),
+			'max'      => min( 20, max( 1, absint( $o['max'] ?? 1 ) ) ),
+			'requires' => sanitize_text_field( $o['requires'] ?? '' ),
+		);
+	}
 	$s = array(
 		'competition'     => sanitize_text_field( $p['competition'] ?? '' ) ?: 'Compétition Vol & Ski',
+		'date_txt'        => sanitize_text_field( $p['date_txt'] ?? '' ),
+		'lieu'            => sanitize_text_field( $p['lieu'] ?? '' ),
+		'adresse'         => sanitize_textarea_field( $p['adresse'] ?? '' ),
+		'image_url'       => esc_url_raw( $p['image_url'] ?? '' ),
+		'presentation'    => sanitize_textarea_field( $p['presentation'] ?? '' ),
+		'programme'       => sanitize_textarea_field( $p['programme'] ?? '' ),
+		'contact'         => sanitize_textarea_field( $p['contact'] ?? '' ),
+		'prix'            => $prix,
+		'tarif_note'      => sanitize_text_field( $p['tarif_note'] ?? '' ),
+		'options'         => $options,
 		'infos'           => sanitize_textarea_field( $p['infos'] ?? '' ),
 		'ouvert'          => empty( $p['ouvert'] ) ? 0 : 1,
 		'email_orga'      => sanitize_email( $p['email_orga'] ?? '' ),

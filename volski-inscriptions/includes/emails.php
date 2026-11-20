@@ -20,6 +20,16 @@ function volski_recap( $r ) {
 		$lines[] = 'Passager biplace : ' . $r['passager'];
 	}
 	$lines[] = 'Contact d\'urgence : ' . $r['urgence_nom'] . ' – ' . $r['urgence_tel'];
+	$opts    = json_decode( (string) ( $r['options_choisies'] ?? '' ), true );
+	if ( $opts ) {
+		$lines[] = 'Options :';
+		foreach ( $opts as $o ) {
+			$lines[] = '  - ' . $o['label'] . ( (int) $o['qty'] > 1 ? ' ×' . (int) $o['qty'] : '' ) . ( $o['prix'] > 0 ? ' : ' . volski_money( $o['prix'] * $o['qty'] ) : '' );
+		}
+	}
+	if ( isset( $r['total'] ) && (float) $r['total'] > 0 ) {
+		$lines[] = 'Total à régler : ' . volski_money( $r['total'] ) . ' (paiement à finaliser avec l\'organisation)';
+	}
 	if ( '' !== $r['commentaire'] ) {
 		$lines[] = 'Commentaire : ' . $r['commentaire'];
 	}
