@@ -114,3 +114,11 @@
 .volski-tcard-price{margin-top:0}
 .volski-tcard-state{margin-top:auto}
 .volski-tcard-note{order:5}
+/* Cartes à quantité (touchers successifs) */
+button.volski-tcard{font:inherit;color:inherit;text-align:left;background:transparent;width:100%;appearance:none}
+.volski-tcard.is-qty.is-on{border-color:var(--vs-accent);background:var(--vs-soft);box-shadow:inset 0 0 0 1px var(--vs-accent)}
+.volski-tcard-qty{align-self:flex-start;margin-top:auto;font-weight:800;border-radius:999px;padding:4px 12px;border:1px solid var(--vs-line);font-variant-numeric:tabular-nums}
+.volski-tcard.is-qty.is-on .volski-tcard-qty{background:var(--vs-accent);border-color:var(--vs-accent);color:#fff;font-size:1.05em}
+button.volski-tcard:focus-visible{outline:3px solid var(--vs-accent);outline-offset:2px}
+button.volski-tcard:focus:not(:focus-visible){outline:none}
+button.volski-tcard.is-qty:not(.is-on):focus:not(:focus-visible){border-color:var(--vs-line)}
