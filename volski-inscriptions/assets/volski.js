@@ -23,7 +23,7 @@
 			var t = 0;
 			form.querySelectorAll('[data-prix]').forEach(function (el) {
 				var p = parseFloat(el.getAttribute('data-prix')) || 0;
-				if (el.type === 'checkbox') { if (el.checked) t += p; }
+				if (el.type === 'checkbox' || el.type === 'radio') { if (el.checked) t += p; }
 				else {
 					var max = parseInt(el.max, 10) || 0, q = Math.max(0, parseInt(el.value, 10) || 0);
 					t += p * (max ? Math.min(q, max) : q);

@@ -152,12 +152,12 @@ function volski_form_shortcode() {
 		</fieldset>
 
 		<fieldset>
-			<legend>Catégorie(s) *</legend>
-			<p class="volski-help">Tu peux t'inscrire dans plusieurs catégories.</p>
-			<div class="volski-choices">
+			<legend>Catégorie *</legend>
+			<p class="volski-help">Une seule catégorie par pilote.</p>
+			<div class="volski-choices" role="radiogroup" aria-label="Catégorie">
 			<?php foreach ( volski_categories() as $k => $label ) : ?>
 				<?php $px = volski_prix_categorie( $k, $s ); ?>
-				<label class="volski-choice"><input type="checkbox" name="categories[]" value="<?php echo esc_attr( $k ); ?>" <?php checked( in_array( $k, $cats_v, true ) ); ?> data-volski-cat="<?php echo esc_attr( $k ); ?>" data-prix="<?php echo esc_attr( (string) (float) $px ); ?>"> <?php echo esc_html( $label ); ?><?php if ( null !== $px ) : ?> <span class="volski-price"><?php echo esc_html( volski_money( $px ) ); ?></span><?php endif; ?></label>
+				<label class="volski-choice"><input type="radio" name="categories[]" value="<?php echo esc_attr( $k ); ?>" <?php checked( isset( $cats_v[0] ) && $cats_v[0] === $k ); ?> data-volski-cat="<?php echo esc_attr( $k ); ?>" data-prix="<?php echo esc_attr( (string) (float) $px ); ?>"> <?php echo esc_html( $label ); ?><?php if ( null !== $px ) : ?> <span class="volski-price"><?php echo esc_html( volski_money( $px ) ); ?></span><?php endif; ?></label>
 			<?php endforeach; ?>
 			</div>
 			<?php echo $err( 'categories' ); // phpcs:ignore ?>

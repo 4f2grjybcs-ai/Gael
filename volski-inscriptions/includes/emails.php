@@ -14,7 +14,7 @@ function volski_recap( $r ) {
 		'E-mail : ' . $r['email'],
 		'Téléphone : ' . $r['telephone'],
 		'Sexe : ' . ( volski_sexes()[ $r['sexe'] ] ?? $r['sexe'] ),
-		'Catégorie(s) : ' . volski_categories_label( $r['categories'] ),
+		'Catégorie : ' . volski_categories_label( $r['categories'] ),
 	);
 	if ( '' !== $r['passager'] ) {
 		$lines[] = 'Passager biplace : ' . $r['passager'];

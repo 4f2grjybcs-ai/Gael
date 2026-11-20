@@ -241,9 +241,9 @@ function volski_page_edit( $id ) {
 						<label class="volski-radio"><input type="radio" name="sexe" value="<?php echo esc_attr( $k ); ?>" <?php checked( $r['sexe'], $k ); ?>> <?php echo esc_html( $l ); ?></label>
 					<?php endforeach; ?>
 				</fieldset></td></tr>
-				<tr><th scope="row">Catégorie(s)</th><td><fieldset>
+				<tr><th scope="row">Catégorie</th><td><fieldset>
 					<?php foreach ( volski_categories() as $k => $l ) : ?>
-						<label class="volski-radio"><input type="checkbox" name="categories[]" value="<?php echo esc_attr( $k ); ?>" <?php checked( in_array( $k, $cats, true ) ); ?>> <?php echo esc_html( $l ); ?></label>
+						<label class="volski-radio"><input type="radio" name="categories[]" value="<?php echo esc_attr( $k ); ?>" <?php checked( isset( $cats[0] ) && $cats[0] === $k ); ?>> <?php echo esc_html( $l ); ?></label>
 					<?php endforeach; ?>
 				</fieldset></td></tr>
 				<?php $f( 'passager', 'Passager biplace' ); ?>
@@ -400,7 +400,7 @@ function volski_page_settings() {
 				<?php foreach ( volski_categories() as $k => $l ) : ?>
 				<tr><th scope="row"><label for="vs-prix-<?php echo esc_attr( $k ); ?>"><?php echo esc_html( $l ); ?></label></th><td><input id="vs-prix-<?php echo esc_attr( $k ); ?>" name="prix[<?php echo esc_attr( $k ); ?>]" class="small-text" inputmode="decimal" value="<?php echo esc_attr( $s['prix'][ $k ] ?? '' ); ?>"> <?php echo esc_html( volski_currency() ); ?></td></tr>
 				<?php endforeach; ?>
-				<tr><th scope="row"><label for="vs-tnote">Précision</label></th><td><input id="vs-tnote" name="tarif_note" class="large-text" value="<?php echo esc_attr( $s['tarif_note'] ); ?>" placeholder="ex. Forfait de ski non compris. Inscription dans plusieurs catégories : les prix s'additionnent."><p class="description">Laisse un prix vide pour ne pas l'afficher. Un participant inscrit dans plusieurs catégories paie la somme des prix.</p></td></tr>
+				<tr><th scope="row"><label for="vs-tnote">Précision</label></th><td><input id="vs-tnote" name="tarif_note" class="large-text" value="<?php echo esc_attr( $s['tarif_note'] ); ?>" placeholder="ex. Forfait de ski non compris."><p class="description">Laisse un prix vide pour ne pas l'afficher. Chaque pilote choisit une seule catégorie.</p></td></tr>
 			</table>
 
 			<h2>Options</h2>

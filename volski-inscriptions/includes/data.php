@@ -150,8 +150,9 @@ function volski_validate( $raw, $public = true ) {
 	if ( ! isset( volski_sexes()[ $data['sexe'] ] ) ) {
 		$errors['sexe'] = 'Choisis Homme ou Femme.';
 	}
-	if ( ! $cats ) {
-		$errors['categories'] = 'Choisis au moins une catégorie : ' . implode( ', ', volski_categories() ) . '.';
+	// Une seule catégorie par pilote : Solo normal, Parakite ou Biplace.
+	if ( 1 !== count( $cats ) ) {
+		$errors['categories'] = 'Choisis ta catégorie : ' . implode( ', ', volski_categories() ) . ' (une seule).';
 	}
 	if ( '' === $data['urgence_nom'] ) {
 		$errors['urgence_nom'] = 'Indique une personne à prévenir en cas d\'accident.';
@@ -239,7 +240,7 @@ function volski_pick_options( $raw ) {
 	return $picked;
 }
 
-/** Total : prix des catégories cochées + options. */
+/** Total : prix de la catégorie + options. */
 function volski_total( $categories_csv, $picked ) {
 	$t = 0.0;
 	foreach ( array_filter( explode( ',', (string) $categories_csv ) ) as $k ) {

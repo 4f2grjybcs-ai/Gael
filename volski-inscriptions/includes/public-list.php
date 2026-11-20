@@ -39,7 +39,7 @@ function volski_public_list() {
 	}
 	echo ' · ' . implode( ' · ', $parts ) . '</p>'; // phpcs:ignore
 	if ( $rows ) {
-		echo '<div class="volski-table-wrap"><table class="volski-table"><thead><tr><th>Nom</th><th>Catégorie(s)</th><th></th></tr></thead><tbody>';
+		echo '<div class="volski-table-wrap"><table class="volski-table"><thead><tr><th>Nom</th><th>Catégorie</th><th></th></tr></thead><tbody>';
 		foreach ( $rows as $r ) {
 			echo '<tr><td>' . esc_html( $r['prenom'] . ' ' . $r['nom'] ) . '</td><td>' . esc_html( volski_categories_label( $r['categories'] ) ) . '</td><td>' . esc_html( volski_sexes()[ $r['sexe'] ] ?? '' ) . '</td></tr>';
 		}

@@ -27,7 +27,7 @@ class Volski_List_Table extends WP_List_Table {
 		return array(
 			'cb'         => '<input type="checkbox">',
 			'nom'        => 'Participant',
-			'categories' => 'Catégorie(s)',
+			'categories' => 'Catégorie',
 			'contact'    => 'Contact',
 			'urgence'    => 'Urgence',
 			'paiement'   => 'Paiement',
