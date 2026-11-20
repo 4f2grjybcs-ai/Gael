@@ -66,9 +66,11 @@ function volski_event_shortcode() {
 					<?php if ( $s['lieu'] ) : ?><li><span>Où</span><?php echo esc_html( $s['lieu'] ); ?></li><?php endif; ?>
 					<li><span>Catégories</span><?php echo esc_html( implode( ' · ', $cats ) ); ?></li>
 				</ul>
-				<?php if ( ! empty( $s['ouvert'] ) ) : ?>
-					<a class="volski-btn volski-btn-hero" href="#volski">S'inscrire</a>
-				<?php else : ?>
+				<?php $liste = volski_liste_url(); ?>
+				<?php if ( $liste ) : ?>
+					<a class="volski-btn volski-btn-hero" href="<?php echo esc_url( $liste ); ?>">Liste des inscrits<?php $n = volski_count_all(); echo $n ? ' <span class="volski-btn-count">' . (int) $n . '</span>' : ''; // phpcs:ignore ?></a>
+				<?php endif; ?>
+				<?php if ( empty( $s['ouvert'] ) ) : ?>
 					<p class="volski-closed">Inscriptions fermées</p>
 				<?php endif; ?>
 			</div>

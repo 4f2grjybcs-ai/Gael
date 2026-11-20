@@ -515,6 +515,7 @@ function volski_page_settings( $front_url = '' ) {
 				<tr><th scope="row">État</th><td><label><input type="checkbox" name="ouvert" value="1" <?php checked( $s['ouvert'], 1 ); ?>> Inscriptions ouvertes (décocher pour fermer le formulaire)</label></td></tr>
 				<tr><th scope="row"><label for="vs-msg">Message de confirmation</label></th><td><textarea id="vs-msg" name="message_confirm" rows="4" class="large-text"><?php echo esc_textarea( $s['message_confirm'] ); ?></textarea><p class="description">Début de l'e-mail reçu par chaque participant, suivi du récapitulatif de son inscription.</p></td></tr>
 				<tr><th scope="row"><label for="vs-mail">E-mail de l'organisation</label></th><td><input id="vs-mail" type="email" name="email_orga" class="regular-text" value="<?php echo esc_attr( $s['email_orga'] ); ?>"><p class="description">Reçoit une alerte à chaque inscription. Les participants qui répondent à leur e-mail écrivent à cette adresse.</p></td></tr>
+				<tr><th scope="row"><label for="vs-liste">Page « Liste des inscrits »</label></th><td><input id="vs-liste" type="url" name="liste_url" class="regular-text" value="<?php echo esc_attr( $s['liste_url'] ); ?>" placeholder="<?php echo esc_attr( volski_liste_url() ?: 'https://…' ); ?>"><p class="description">Le bouton de la bannière mène à cette page. Laisse vide : l'extension prend la page qui contient [volski_inscrits]<?php echo volski_liste_url() ? ' (actuellement : ' . esc_html( volski_liste_url() ) . ')' : ' (aucune trouvée pour l\'instant : crée-la pour que le bouton apparaisse)'; ?>.</p></td></tr>
 				<tr><th scope="row"><label for="vs-regl">Lien du règlement</label></th><td><input id="vs-regl" type="url" name="reglement_url" class="regular-text" value="<?php echo esc_attr( $s['reglement_url'] ); ?>" placeholder="https://…"><p class="description">Facultatif. Affiché dans la case à cocher du formulaire.</p></td></tr>
 				<tr><th scope="row">Liste publique</th><td><label><input type="checkbox" name="liste_publique" value="1" <?php checked( $s['liste_publique'], 1 ); ?>> Activer la liste publique des inscrits</label></td></tr>
 			</table>
@@ -590,6 +591,7 @@ function volski_admin_save_settings() {
 		'email_orga'      => sanitize_email( $p['email_orga'] ?? '' ),
 		'message_confirm' => sanitize_textarea_field( $p['message_confirm'] ?? '' ),
 		'reglement_url'   => esc_url_raw( $p['reglement_url'] ?? '' ),
+		'liste_url'       => esc_url_raw( $p['liste_url'] ?? '' ),
 		'liste_publique'  => empty( $p['liste_publique'] ) ? 0 : 1,
 	);
 	update_option( 'volski_settings', $s );

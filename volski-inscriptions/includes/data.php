@@ -117,6 +117,7 @@ function volski_settings() {
 		'email_orga'      => get_option( 'admin_email' ),
 		'message_confirm' => "Merci pour ton inscription !\nNous te recontacterons prochainement pour finaliser le paiement.",
 		'reglement_url'   => '',
+		'liste_url'       => '',
 		'liste_publique'  => 1,
 	);
 	$saved = get_option( 'volski_settings', array() );
@@ -317,4 +318,28 @@ function volski_option_price_label( $o, $unit = false ) {
 		return 'Gratuit';
 	}
 	return volski_money( $o['prix'] ) . ( $unit && $o['max'] > 1 ? ' / unité' : '' );
+}
+
+/** Nombre total d'inscrits. */
+function volski_count_all() {
+	global $wpdb;
+	return (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . volski_table() ); // phpcs:ignore
+}
+
+/**
+ * Adresse de la page « Liste des inscrits » : celle choisie dans les réglages,
+ * sinon la page publiée qui contient [volski_inscrits].
+ */
+function volski_liste_url() {
+	$s = volski_settings();
+	if ( ! empty( $s['liste_url'] ) ) {
+		return $s['liste_url'];
+	}
+	$id = (int) get_option( 'volski_liste_page' );
+	if ( ! $id || 'publish' !== get_post_status( $id ) || false === strpos( (string) get_post_field( 'post_content', $id ), '[volski_inscrits' ) ) {
+		global $wpdb;
+		$id = (int) $wpdb->get_var( "SELECT ID FROM {$wpdb->posts} WHERE post_status = 'publish' AND post_type IN ('page','post') AND post_content LIKE '%[volski_inscrits%' ORDER BY post_type = 'page' DESC, ID ASC LIMIT 1" ); // phpcs:ignore
+		update_option( 'volski_liste_page', $id, false );
+	}
+	return $id ? get_permalink( $id ) : '';
 }

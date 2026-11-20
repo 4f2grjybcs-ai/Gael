@@ -120,3 +120,5 @@
 	.volski-tcard-state,.volski-tcard-qty{width:36px;height:36px}
 	.volski-tcard-price{font-size:1.15em}
 }
+.volski-btn-hero{gap:10px}
+.volski-btn-count{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 7px;border-radius:999px;background:#183a52;color:#fff;font-size:.85em;font-variant-numeric:tabular-nums}

@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Inscriptions Vol & Ski
  * Description:       Formulaire d'inscription à une compétition de vol et ski (Solo, Biplace, Parakite), liste des inscrits dans l'admin avec export Excel, e-mails automatiques et liste publique.
- * Version:           1.8.0
+ * Version:           1.9.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Gael
@@ -14,7 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'VOLSKI_VERSION', '1.8.0' );
+define( 'VOLSKI_VERSION', '1.9.0' );
 define( 'VOLSKI_DB_VERSION', '4' );
 define( 'VOLSKI_FILE', __FILE__ );
 define( 'VOLSKI_DIR', plugin_dir_path( __FILE__ ) );

@@ -14,7 +14,7 @@ Inscription en ligne à une compétition de vol et ski, avec un espace réservé
 
 ## Ce que fait l'extension
 
-**Page de l'événement** : bannière (photo ou couleur) avec dates, lieu et bouton « S'inscrire », présentation, programme heure par heure, infos pratiques avec lien vers la carte, tarifs par catégorie et options.
+**Page de l'événement** : bannière (photo ou couleur) avec dates, lieu et bouton « Liste des inscrits » (avec le nombre d'inscrits), présentation, programme heure par heure, infos pratiques avec lien vers la carte, tarifs par catégorie et options.
 
 **Catégories et tarifs** (tout se modifie dans Infos compétition : renommer, ajouter, retirer) :
 - **Catégories** (par défaut Solo normal, Parakite, Biplace) : chaque pilote en choisit une seule ; « Passager » demande le nom du passager (ex. Biplace) ; le prix est facultatif.
