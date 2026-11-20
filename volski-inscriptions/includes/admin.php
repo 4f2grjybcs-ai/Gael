@@ -411,8 +411,8 @@ function volski_page_settings( $front_url = '' ) {
 				<tr><th scope="row"><label for="vs-contact">Contact</label></th><td><textarea id="vs-contact" name="contact" rows="2" class="large-text" placeholder="ex. Julien – 06 12 34 56 78"><?php echo esc_textarea( $s['contact'] ); ?></textarea></td></tr>
 			</table>
 
-			<h2>Catégories et tarifs</h2>
-			<p class="description">Chaque pilote choisit une seule catégorie. Renomme, ajoute ou retire librement. Coche « Passager » pour demander le nom du passager (ex. Biplace). Prix vide = pas de prix affiché.</p>
+			<h2>Catégories</h2>
+			<p class="description">Chaque pilote choisit une seule catégorie. Renomme, ajoute ou retire librement. Coche « Passager » pour demander le nom du passager (ex. Biplace). Le prix est facultatif : laisse-le vide si le prix se règle avec les tarifs ci-dessous.</p>
 			<table class="widefat volski-opts-admin volski-repeat" id="volski-cats">
 				<thead><tr><th>Catégorie</th><th>Prix (<?php echo esc_html( volski_currency() ); ?>)</th><th>Passager</th><th></th></tr></thead>
 				<tbody>
@@ -432,23 +432,24 @@ function volski_page_settings( $front_url = '' ) {
 			</table>
 			<p><button type="button" class="button volski-row-add" data-table="volski-cats">+ Ajouter une catégorie</button></p>
 			<table class="form-table" role="presentation">
-				<tr><th scope="row"><label for="vs-tnote">Précision sur les tarifs</label></th><td><input id="vs-tnote" name="tarif_note" class="large-text" value="<?php echo esc_attr( $s['tarif_note'] ); ?>" placeholder="ex. Forfait de ski non compris."></td></tr>
-			</table>
 
-			<h2>Options</h2>
-			<p class="description">Ce que les participants peuvent ajouter à leur inscription. « Max » = quantité maximale par personne (1 = une case à cocher). « Seulement avec » : l'option n'est proposée que si l'autre est choisie (ex. « +1 au souper » seulement avec « Souper »). Prix vide = pas de prix affiché ; 0 = « Gratuit ».</p>
+
+			<h2>Tarifs</h2>
+			<p class="description">Les cartes à sélectionner dans la section « Tarifs » de la page, avec le total en direct. Ex. Inscription 35, Souper 40, Abonnement télécabine.<br>
+			« Obligatoire » : toujours compté, carte marquée « Inclus » (ex. Inscription). « Max » : quantité maximale par personne (1 = à cocher). « Seulement avec » : proposé seulement si l'autre est choisi (ex. « +1 au souper » avec « Souper »). Prix vide = pas de prix affiché ; 0 = « Gratuit ».</p>
 			<table class="widefat volski-opts-admin volski-repeat" id="volski-opts">
-				<thead><tr><th>Option</th><th>Prix (<?php echo esc_html( volski_currency() ); ?>)</th><th>Max</th><th>Seulement avec</th><th></th></tr></thead>
+				<thead><tr><th>Tarif</th><th>Prix (<?php echo esc_html( volski_currency() ); ?>)</th><th>Obligatoire</th><th>Max</th><th>Seulement avec</th><th></th></tr></thead>
 				<tbody>
 				<?php
 				$rows = array_values( (array) $s['options'] );
-				$rows[] = array( 'label' => '', 'prix' => '', 'max' => 1, 'requires' => '' );
+				$rows[] = array( 'label' => '', 'prix' => '', 'max' => 1, 'requires' => '', 'oblig' => 0 );
 				$parents = array_filter( wp_list_pluck( (array) $s['options'], 'label' ) );
 				foreach ( $rows as $i => $o ) :
 					?>
 					<tr>
-						<td data-label="Option"><input name="options[<?php echo (int) $i; ?>][label]" class="regular-text" value="<?php echo esc_attr( $o['label'] ?? '' ); ?>" placeholder="ex. Repas du samedi soir"></td>
+						<td data-label="Tarif"><input name="options[<?php echo (int) $i; ?>][label]" class="regular-text" value="<?php echo esc_attr( $o['label'] ?? '' ); ?>" placeholder="ex. Souper"></td>
 						<td data-label="Prix"><input name="options[<?php echo (int) $i; ?>][prix]" class="small-text" inputmode="decimal" value="<?php echo esc_attr( $o['prix'] ?? '' ); ?>"></td>
+						<td data-label="Obligatoire"><label><input type="checkbox" name="options[<?php echo (int) $i; ?>][oblig]" value="1" <?php checked( ! empty( $o['oblig'] ) ); ?>> Toujours inclus</label></td>
 						<td data-label="Max"><input name="options[<?php echo (int) $i; ?>][max]" type="number" min="1" max="20" class="small-text" value="<?php echo esc_attr( $o['max'] ?? 1 ); ?>"></td>
 						<td data-label="Seulement avec"><select name="options[<?php echo (int) $i; ?>][requires]"><option value="">—</option>
 							<?php foreach ( $parents as $pl ) : ?>
@@ -460,7 +461,10 @@ function volski_page_settings( $front_url = '' ) {
 				<?php endforeach; ?>
 				</tbody>
 			</table>
-			<p><button type="button" class="button volski-row-add" data-table="volski-opts">+ Ajouter une option</button></p>
+			<p><button type="button" class="button volski-row-add" data-table="volski-opts">+ Ajouter un tarif</button></p>
+			<table class="form-table" role="presentation">
+				<tr><th scope="row"><label for="vs-tnote">Précision sur les tarifs</label></th><td><input id="vs-tnote" name="tarif_note" class="large-text" value="<?php echo esc_attr( $s['tarif_note'] ); ?>" placeholder="ex. Forfait de ski non compris."></td></tr>
+			</table>
 			<script>
 			(function () {
 				// Lignes à ajouter / retirer dans les tableaux Catégories et Options.
@@ -550,6 +554,7 @@ function volski_admin_save_settings() {
 			'prix'     => '' === $praw ? '' : (string) $praw,
 			'max'      => min( 20, max( 1, absint( $o['max'] ?? 1 ) ) ),
 			'requires' => sanitize_text_field( $o['requires'] ?? '' ),
+			'oblig'    => empty( $o['oblig'] ) ? 0 : 1,
 		);
 	}
 	$s = array(

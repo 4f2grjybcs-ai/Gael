@@ -16,7 +16,9 @@ Inscription en ligne à une compétition de vol et ski, avec un espace réservé
 
 **Page de l'événement** : bannière (photo ou couleur) avec dates, lieu et bouton « S'inscrire », présentation, programme heure par heure, infos pratiques avec lien vers la carte, tarifs par catégorie et options.
 
-**Catégories, tarifs et options** (tout se modifie dans Infos compétition : renommer, ajouter, retirer) : des catégories avec leur prix en CHF (par défaut Solo normal, Parakite, Biplace ; chaque pilote en choisit une seule ; « Passager » demande le nom du passager, ex. Biplace) et des options à ajouter, par exemple **Abonnement télécabine**, **Souper**, **+1 au souper**. Une option peut dépendre d'une autre : « +1 au souper » n'est proposé que si « Souper » est coché. Le total s'affiche en direct dans le formulaire et figure dans les e-mails.
+**Catégories et tarifs** (tout se modifie dans Infos compétition : renommer, ajouter, retirer) :
+- **Catégories** (par défaut Solo normal, Parakite, Biplace) : chaque pilote en choisit une seule ; « Passager » demande le nom du passager (ex. Biplace) ; le prix est facultatif.
+- **Tarifs** : les cartes à sélectionner sur la page, par ex. **Inscription 35.–** (obligatoire, toujours incluse), **Souper 40.–**, **+1 au souper** (seulement avec le souper), **Abonnement télécabine**. Un encadré **Total** se met à jour en direct. Prix en CHF.
 
 **Formulaire** : prénom, nom, e-mail, téléphone, sexe (Homme / Femme), catégorie Solo normal, Parakite ou Biplace (une seule par pilote ; nom du passager si Biplace), contact d'urgence, commentaire. Une case pour apparaître dans la liste publique, une case obligatoire d'accord sur l'utilisation des données. Protection anti-robots et refus des doublons.
 

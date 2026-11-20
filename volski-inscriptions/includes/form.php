@@ -125,7 +125,7 @@ function volski_form_shortcode() {
 		echo '</div>';
 	}
 	?>
-	<form method="post" class="volski-form" novalidate>
+	<form method="post" class="volski-form" id="volski-form" novalidate>
 		<?php wp_nonce_field( 'volski_inscription', 'volski_nonce' ); ?>
 		<input type="hidden" name="volski_submit" value="1">
 		<div class="volski-hp" aria-hidden="true"><label>Ne pas remplir <input type="text" name="volski_site_web" tabindex="-1" autocomplete="off"></label></div>
@@ -172,33 +172,15 @@ function volski_form_shortcode() {
 			</div>
 		</fieldset>
 
-		<?php
-		$opts   = volski_options( $s );
-		$opts_v = isset( $v['opt'] ) && is_array( $v['opt'] ) ? $v['opt'] : array();
-		if ( $opts ) :
-			?>
+		<?php if ( empty( $GLOBALS['volski_cards_outside'] ) && volski_options( $s ) ) : ?>
 		<fieldset>
-			<legend>Options</legend>
-			<div class="volski-opts">
-			<?php foreach ( $opts as $i => $o ) : ?>
-				<?php $q = isset( $opts_v[ $i ] ) ? min( absint( $opts_v[ $i ] ), $o['max'] ) : 0; ?>
-				<div class="volski-opt"<?php if ( $o['requires'] ) : ?> data-volski-requires="<?php echo esc_attr( $o['requires'] ); ?>"<?php endif; ?>>
-					<?php if ( 1 === $o['max'] ) : ?>
-						<label class="volski-check"><input type="checkbox" name="opt[<?php echo (int) $i; ?>]" value="1" data-volski-opt="<?php echo esc_attr( $o['label'] ); ?>" data-prix="<?php echo esc_attr( (string) $o['prix'] ); ?>" <?php checked( $q, 1 ); ?>> <span><?php echo esc_html( $o['label'] ); ?></span></label>
-					<?php else : ?>
-						<label for="volski-opt-<?php echo (int) $i; ?>"><?php echo esc_html( $o['label'] ); ?></label>
-						<input id="volski-opt-<?php echo (int) $i; ?>" class="volski-qty" type="number" inputmode="numeric" min="0" max="<?php echo (int) $o['max']; ?>" name="opt[<?php echo (int) $i; ?>]" value="<?php echo (int) $q; ?>" data-volski-opt="<?php echo esc_attr( $o['label'] ); ?>" data-prix="<?php echo esc_attr( (string) $o['prix'] ); ?>">
-					<?php endif; ?>
-					<span class="volski-price"><?php echo esc_html( volski_option_price_label( $o, true ) ); ?></span>
-					<?php if ( $o['requires'] ) : ?><span class="volski-help volski-req">Avec « <?php echo esc_html( $o['requires'] ); ?> » uniquement</span><?php endif; ?>
-				</div>
-			<?php endforeach; ?>
-			</div>
+			<legend>Tarifs</legend>
+			<?php echo volski_tarif_cards( $s, isset( $v['opt'] ) && is_array( $v['opt'] ) ? $v['opt'] : array(), true ); // phpcs:ignore ?>
 		</fieldset>
 		<?php endif; ?>
 
 		<?php if ( volski_has_prices( $s ) ) : ?>
-		<div class="volski-total" aria-live="polite">
+		<div class="volski-total">
 			<span>Total à régler</span>
 			<strong data-volski-total data-currency="<?php echo esc_attr( volski_currency() ); ?>">0 <?php echo esc_html( volski_currency() ); ?></strong>
 			<small>Pas de paiement en ligne : l'organisation te recontacte pour finaliser le règlement.</small>
@@ -236,4 +218,56 @@ function volski_has_prices( $s = null ) {
 		}
 	}
 	return false;
+}
+
+/**
+ * Cartes de tarifs sélectionnables (Inscription, Souper, Abonnement télécabine…).
+ * $interactive = false : simples cartes d'information (formulaire fermé ou déjà envoyé).
+ * Les cases portent form="volski-form" : elles comptent dans le formulaire même placées ailleurs sur la page.
+ */
+function volski_tarif_cards( $s, $values = array(), $interactive = true ) {
+	$opts = volski_options( $s );
+	if ( ! $opts ) {
+		return '';
+	}
+	$sent = ! empty( $values );
+	ob_start();
+	echo '<div class="volski-tarifs">';
+	foreach ( $opts as $i => $o ) {
+		$q        = isset( $values[ $i ] ) ? min( absint( $values[ $i ] ), $o['max'] ) : 0;
+		$q        = $o['oblig'] ? max( 1, $q ) : $q;
+		$price    = volski_option_price_label( $o, true );
+		$req_attr = $o['requires'] ? ' data-volski-requires="' . esc_attr( $o['requires'] ) . '"' : '';
+		$common   = ' form="volski-form" data-volski-opt="' . esc_attr( $o['label'] ) . '" data-prix="' . esc_attr( (string) $o['prix'] ) . '"';
+		$classes  = 'volski-tcard' . ( $o['oblig'] ? ' is-oblig' : '' ) . ( $interactive ? '' : ' is-static' );
+		if ( ! $interactive ) {
+			echo '<div class="' . esc_attr( $classes ) . '"' . $req_attr . '><span class="volski-tcard-name">' . esc_html( $o['label'] ) . '</span>' . ( $price ? '<strong class="volski-tcard-price">' . esc_html( $price ) . '</strong>' : '' ) . ( $o['oblig'] ? '<span class="volski-tcard-state">Inclus</span>' : '' ) . '</div>'; // phpcs:ignore
+			continue;
+		}
+		if ( 1 === $o['max'] ) {
+			echo '<label class="' . esc_attr( $classes ) . '"' . $req_attr . '>'; // phpcs:ignore
+			echo '<input type="checkbox" class="volski-tcard-input" name="opt[' . (int) $i . ']" value="1"' . $common . checked( $q > 0, true, false ) . ( $o['oblig'] ? ' disabled' : '' ) . '>'; // phpcs:ignore
+			echo '<span class="volski-tcard-name">' . esc_html( $o['label'] ) . '</span>';
+			echo $price ? '<strong class="volski-tcard-price">' . esc_html( $price ) . '</strong>' : '';
+			echo '<span class="volski-tcard-state" aria-hidden="true" data-on="' . ( $o['oblig'] ? 'Inclus' : 'Choisi ✓' ) . '" data-off="Ajouter"></span>';
+			if ( $o['requires'] ) {
+				echo '<small class="volski-tcard-note">Avec « ' . esc_html( $o['requires'] ) . ' »</small>';
+			}
+			echo '</label>';
+		} else {
+			echo '<div class="' . esc_attr( $classes ) . ' is-qty"' . $req_attr . '>'; // phpcs:ignore
+			echo '<label class="volski-tcard-name" for="volski-opt-' . (int) $i . '">' . esc_html( $o['label'] ) . '</label>';
+			echo $price ? '<strong class="volski-tcard-price">' . esc_html( $price ) . '</strong>' : '';
+			echo '<input id="volski-opt-' . (int) $i . '" class="volski-qty" type="number" inputmode="numeric" min="' . ( $o['oblig'] ? 1 : 0 ) . '" max="' . (int) $o['max'] . '" name="opt[' . (int) $i . ']" value="' . (int) $q . '"' . $common . '>'; // phpcs:ignore
+			echo '</div>';
+		}
+	}
+	echo '</div>';
+	unset( $sent );
+	return ob_get_clean();
+}
+
+/** Encadré du total (mis à jour en direct). */
+function volski_total_box() {
+	return '<div class="volski-total volski-total-big"><span>Total</span><strong data-volski-total data-currency="' . esc_attr( volski_currency() ) . '">0 ' . esc_html( volski_currency() ) . '</strong><small>Pas de paiement en ligne : l\'organisation te recontacte après l\'inscription pour finaliser le règlement.</small></div>';
 }

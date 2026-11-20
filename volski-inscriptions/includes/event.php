@@ -54,18 +54,6 @@ function volski_event_shortcode() {
 	$s     = volski_settings();
 	$opts  = volski_options( $s );
 	$cats  = volski_categories();
-	$priced = array_filter(
-		array_map(
-			function ( $k ) use ( $s ) {
-				return volski_prix_categorie( $k, $s );
-			},
-			array_combine( array_keys( $cats ), array_keys( $cats ) )
-		),
-		function ( $v ) {
-			return null !== $v;
-		}
-	);
-
 	ob_start();
 	?>
 	<div class="volski volski-event">
@@ -118,32 +106,28 @@ function volski_event_shortcode() {
 		</section>
 		<?php endif; ?>
 
-		<?php if ( $priced || $opts ) : ?>
-		<section class="volski-sec">
+		<?php if ( $opts ) : ?>
+		<?php
+		$state       = $GLOBALS['volski_form_state'];
+		$done        = isset( $_GET['volski'] ) && 'merci' === $_GET['volski']; // phpcs:ignore WordPress.Security.NonceVerification
+		$interactive = ! empty( $s['ouvert'] ) && ! $done;
+		?>
+		<section class="volski-sec volski-sec-tarifs">
 			<h3>Tarifs</h3>
-			<?php if ( $priced ) : ?>
-			<div class="volski-prices">
-				<?php foreach ( $priced as $k => $px ) : ?>
-					<div class="volski-price-card"><span><?php echo esc_html( $cats[ $k ] ); ?></span><strong><?php echo esc_html( volski_money( $px ) ); ?></strong></div>
-				<?php endforeach; ?>
-			</div>
-			<?php endif; ?>
+			<?php if ( $interactive ) : ?><p class="volski-help">Touche les cartes pour composer ton inscription.</p><?php endif; ?>
+			<?php echo volski_tarif_cards( $s, $state && isset( $state['values']['opt'] ) && is_array( $state['values']['opt'] ) ? $state['values']['opt'] : array(), $interactive ); // phpcs:ignore ?>
+			<?php if ( $interactive ) : ?><?php echo volski_total_box(); // phpcs:ignore ?><?php endif; ?>
 			<?php if ( $s['tarif_note'] ) : ?><p class="volski-help"><?php echo esc_html( $s['tarif_note'] ); ?></p><?php endif; ?>
-			<?php if ( $opts ) : ?>
-			<h4 class="volski-sub-h">Options</h4>
-			<ul class="volski-opt-list">
-				<?php foreach ( $opts as $o ) : ?>
-					<li><span><?php echo esc_html( $o['label'] ); ?><?php if ( $o['requires'] ) : ?> <small>(avec <?php echo esc_html( mb_strtolower( $o['requires'] ) ); ?>)</small><?php endif; ?></span><span class="volski-dots" aria-hidden="true"></span><strong><?php echo esc_html( volski_option_price_label( $o ) ); ?></strong></li>
-				<?php endforeach; ?>
-			</ul>
-			<?php endif; ?>
-			<p class="volski-help">Pas de paiement en ligne : après ton inscription, l'organisation te recontacte pour finaliser le règlement.</p>
 		</section>
 		<?php endif; ?>
 
 		<section class="volski-sec volski-sec-form">
 			<h3>Inscription</h3>
-			<?php echo volski_form_shortcode(); // phpcs:ignore ?>
+			<?php
+			$GLOBALS['volski_cards_outside'] = (bool) $opts; // les tarifs sont déjà dans la section du dessus
+			echo volski_form_shortcode(); // phpcs:ignore
+			$GLOBALS['volski_cards_outside'] = false;
+			?>
 		</section>
 	</div>
 	<?php

@@ -108,9 +108,10 @@ function volski_settings() {
 		'categories'      => array(),
 		'tarif_note'      => '',
 		'options'         => array(
-			array( 'label' => 'Abonnement télécabine', 'prix' => '', 'max' => 1, 'requires' => '' ),
-			array( 'label' => 'Souper', 'prix' => '', 'max' => 1, 'requires' => '' ),
-			array( 'label' => '+1 au souper (accompagnant)', 'prix' => '', 'max' => 1, 'requires' => 'Souper' ),
+			array( 'label' => 'Inscription', 'prix' => '35', 'max' => 1, 'requires' => '', 'oblig' => 1 ),
+			array( 'label' => 'Souper', 'prix' => '40', 'max' => 1, 'requires' => '', 'oblig' => 0 ),
+			array( 'label' => '+1 au souper (accompagnant)', 'prix' => '40', 'max' => 1, 'requires' => 'Souper', 'oblig' => 0 ),
+			array( 'label' => 'Abonnement télécabine', 'prix' => '', 'max' => 1, 'requires' => '', 'oblig' => 0 ),
 		),
 		'ouvert'          => 1,
 		'email_orga'      => get_option( 'admin_email' ),
@@ -228,6 +229,7 @@ function volski_options( $s = null ) {
 				'has_prix' => '' !== $amt,
 				'max'      => max( 1, (int) ( $o['max'] ?? 1 ) ),
 				'requires' => (string) ( $o['requires'] ?? '' ),
+				'oblig'    => ! empty( $o['oblig'] ),
 			);
 		}
 	}
@@ -264,6 +266,9 @@ function volski_pick_options( $raw ) {
 	$qty   = array();
 	foreach ( $opts as $i => $o ) {
 		$qty[ $i ] = min( isset( $raw[ $i ] ) ? absint( $raw[ $i ] ) : 0, $o['max'] );
+		if ( $o['oblig'] ) {
+			$qty[ $i ] = max( 1, $qty[ $i ] ); // Produit obligatoire (ex. Inscription) : toujours compté.
+		}
 	}
 	// Une option qui dépend d'une autre (ex. « +1 au souper ») n'est gardée que si l'autre est choisie.
 	$labels = array();
