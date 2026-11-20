@@ -218,7 +218,7 @@ function volski_page_edit( $id ) {
 				<tr><th scope="row"><label for="vs-mode">Moyen de paiement</label></th><td><select id="vs-mode" name="paiement_mode"><option value="">—</option><?php foreach ( volski_modes() as $k => $l ) : ?><option value="<?php echo esc_attr( $k ); ?>" <?php selected( $r['paiement_mode'] ?? '', $k ); ?>><?php echo esc_html( $l ); ?></option><?php endforeach; ?></select></td></tr>
 				<?php if ( $id ) : ?>
 				<tr><th scope="row">Options choisies</th><td><?php echo esc_html( volski_options_label( $r['options_choisies'] ?? '' ) ?: 'Aucune' ); ?></td></tr>
-				<tr><th scope="row"><label for="vs-total">Total à régler</label></th><td><input id="vs-total" name="total" class="small-text" inputmode="decimal" value="<?php echo esc_attr( number_format( (float) ( $r['total'] ?? 0 ), 2, ',', '' ) ); ?>"> €<p class="description">Calculé à l'inscription. Tu peux le corriger (remise, option ajoutée…).</p></td></tr>
+				<tr><th scope="row"><label for="vs-total">Total à régler</label></th><td><input id="vs-total" name="total" class="small-text" inputmode="decimal" value="<?php echo esc_attr( number_format( (float) ( $r['total'] ?? 0 ), 2, '.', '' ) ); ?>"> <?php echo esc_html( volski_currency() ); ?><p class="description">Calculé à l'inscription. Tu peux le corriger (remise, option ajoutée…).</p></td></tr>
 				<?php else : ?>
 				<tr><th scope="row">Options</th><td>
 					<?php foreach ( volski_options() as $i => $o ) : ?>
@@ -288,7 +288,7 @@ function volski_admin_save() {
 	if ( $id ) {
 		// Les options restent celles choisies à l'inscription ; seul le total peut être corrigé.
 		unset( $data['options_choisies'] );
-		$data['total'] = max( 0, round( (float) str_replace( array( ',', ' ', '€' ), array( '.', '', '' ), (string) wp_unslash( $_POST['total'] ?? '0' ) ), 2 ) );
+		$data['total'] = (float) volski_parse_amount( wp_unslash( $_POST['total'] ?? '0' ) );
 		$wpdb->update( volski_table(), $data, array( 'id' => $id ) );
 		volski_back( array( 'action' => 'edit', 'id' => $id, 'msg' => 'saved' ) );
 	}
@@ -342,7 +342,7 @@ function volski_admin_export() {
 	foreach ( $opts as $o ) {
 		$head[] = $o['label'];
 	}
-	$head = array_merge( $head, array( 'Total (€)', 'Paiement', 'Moyen de paiement', 'Liste publique', 'Commentaire', 'Note du comité' ) );
+	$head = array_merge( $head, array( 'Total (' . volski_currency() . ')', 'Paiement', 'Moyen de paiement', 'Liste publique', 'Commentaire', 'Note du comité' ) );
 	fputcsv( $out, $head, ';' );
 	// Une cellule qui commence par = + - @ serait lue comme une formule par Excel : on la neutralise.
 	$cell = function ( $v ) {
@@ -360,7 +360,7 @@ function volski_admin_export() {
 			$q      = volski_opt_qty( $r['options_choisies'], $o['label'] );
 			$line[] = $q ? ( 1 === $o['max'] ? 'Oui' : $q ) : '';
 		}
-		$line = array_merge( $line, array( number_format( (float) $r['total'], 2, ',', '' ), volski_paiements()[ $r['paiement'] ] ?? $r['paiement'], volski_modes()[ $r['paiement_mode'] ] ?? '', $r['afficher_public'] ? 'Oui' : 'Non', $r['commentaire'], $r['note_admin'] ) );
+		$line = array_merge( $line, array( number_format( (float) $r['total'], 2, '.', '' ), volski_paiements()[ $r['paiement'] ] ?? $r['paiement'], volski_modes()[ $r['paiement_mode'] ] ?? '', $r['afficher_public'] ? 'Oui' : 'Non', $r['commentaire'], $r['note_admin'] ) );
 		fputcsv( $out, array_map( $cell, $line ), ';' );
 	}
 	fclose( $out );
@@ -398,7 +398,7 @@ function volski_page_settings() {
 			<h2>Tarifs</h2>
 			<table class="form-table" role="presentation">
 				<?php foreach ( volski_categories() as $k => $l ) : ?>
-				<tr><th scope="row"><label for="vs-prix-<?php echo esc_attr( $k ); ?>"><?php echo esc_html( $l ); ?></label></th><td><input id="vs-prix-<?php echo esc_attr( $k ); ?>" name="prix[<?php echo esc_attr( $k ); ?>]" class="small-text" inputmode="decimal" value="<?php echo esc_attr( $s['prix'][ $k ] ?? '' ); ?>"> €</td></tr>
+				<tr><th scope="row"><label for="vs-prix-<?php echo esc_attr( $k ); ?>"><?php echo esc_html( $l ); ?></label></th><td><input id="vs-prix-<?php echo esc_attr( $k ); ?>" name="prix[<?php echo esc_attr( $k ); ?>]" class="small-text" inputmode="decimal" value="<?php echo esc_attr( $s['prix'][ $k ] ?? '' ); ?>"> <?php echo esc_html( volski_currency() ); ?></td></tr>
 				<?php endforeach; ?>
 				<tr><th scope="row"><label for="vs-tnote">Précision</label></th><td><input id="vs-tnote" name="tarif_note" class="large-text" value="<?php echo esc_attr( $s['tarif_note'] ); ?>" placeholder="ex. Forfait de ski non compris. Inscription dans plusieurs catégories : les prix s'additionnent."><p class="description">Laisse un prix vide pour ne pas l'afficher. Un participant inscrit dans plusieurs catégories paie la somme des prix.</p></td></tr>
 			</table>
@@ -406,7 +406,7 @@ function volski_page_settings() {
 			<h2>Options</h2>
 			<p class="description">Ce que les participants peuvent ajouter à leur inscription. « Max » = quantité maximale par personne (1 = une case à cocher). « Seulement avec » : l'option n'est proposée que si l'autre est choisie (ex. « +1 au souper » seulement avec « Souper »). Prix vide = pas de prix affiché ; 0 = « Gratuit ».</p>
 			<table class="widefat volski-opts-admin" id="volski-opts">
-				<thead><tr><th>Option</th><th>Prix (€)</th><th>Max</th><th>Seulement avec</th><th></th></tr></thead>
+				<thead><tr><th>Option</th><th>Prix (<?php echo esc_html( volski_currency() ); ?>)</th><th>Max</th><th>Seulement avec</th><th></th></tr></thead>
 				<tbody>
 				<?php
 				$rows = array_values( (array) $s['options'] );
@@ -474,8 +474,8 @@ function volski_admin_save_settings() {
 	$p = wp_unslash( $_POST );
 	$prix = array();
 	foreach ( volski_categories() as $k => $l ) {
-		$v          = trim( str_replace( array( ' ', '€' ), '', (string) ( $p['prix'][ $k ] ?? '' ) ) );
-		$prix[ $k ] = '' === $v ? '' : (string) max( 0, round( (float) str_replace( ',', '.', $v ), 2 ) );
+		$v          = volski_parse_amount( $p['prix'][ $k ] ?? '' );
+		$prix[ $k ] = '' === $v ? '' : (string) $v;
 	}
 	$options = array();
 	foreach ( (array) ( $p['options'] ?? array() ) as $o ) {
@@ -483,10 +483,10 @@ function volski_admin_save_settings() {
 		if ( '' === $label ) {
 			continue;
 		}
-		$praw      = trim( str_replace( array( ' ', '€' ), '', (string) ( $o['prix'] ?? '' ) ) );
+		$praw      = volski_parse_amount( $o['prix'] ?? '' );
 		$options[] = array(
 			'label'    => mb_substr( $label, 0, 80 ),
-			'prix'     => '' === $praw ? '' : (string) max( 0, round( (float) str_replace( ',', '.', $praw ), 2 ) ),
+			'prix'     => '' === $praw ? '' : (string) $praw,
 			'max'      => min( 20, max( 1, absint( $o['max'] ?? 1 ) ) ),
 			'requires' => sanitize_text_field( $o['requires'] ?? '' ),
 		);

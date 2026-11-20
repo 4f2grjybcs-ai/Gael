@@ -1,13 +1,15 @@
 // Champ « passager » si Biplace est cochée, et total calculé en direct.
 (function () {
+	var cur = 'CHF';
 	var fmt = function (v) {
 		var r = Math.round(v * 100) / 100;
-		return (r % 1 ? r.toFixed(2).replace('.', ',') : String(r)).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' €';
+		return (r % 1 ? r.toFixed(2) : String(r)).replace(/\B(?=(\d{3})+(?!\d))/g, "'") + ' ' + cur;
 	};
 	document.querySelectorAll('.volski-form').forEach(function (form) {
 		var box = form.querySelector('[data-volski-cat="biplace"]');
 		var field = form.querySelector('[data-volski-show="biplace"]');
 		var out = form.querySelector('[data-volski-total]');
+		if (out && out.getAttribute('data-currency')) cur = out.getAttribute('data-currency');
 		var sync = function () {
 			if (box && field) field.hidden = !box.checked;
 			form.querySelectorAll('[data-volski-requires]').forEach(function (wrap) {

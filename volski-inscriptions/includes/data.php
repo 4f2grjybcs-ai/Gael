@@ -18,9 +18,9 @@ function volski_categories() {
 	return apply_filters(
 		'volski_categories',
 		array(
-			'solo'     => 'Solo',
-			'biplace'  => 'Biplace',
+			'solo'     => 'Solo normal',
 			'parakite' => 'Parakite',
+			'biplace'  => 'Biplace',
 		)
 	);
 }
@@ -151,7 +151,7 @@ function volski_validate( $raw, $public = true ) {
 		$errors['sexe'] = 'Choisis Homme ou Femme.';
 	}
 	if ( ! $cats ) {
-		$errors['categories'] = 'Choisis au moins une catégorie : Solo, Biplace ou Parakite.';
+		$errors['categories'] = 'Choisis au moins une catégorie : ' . implode( ', ', volski_categories() ) . '.';
 	}
 	if ( '' === $data['urgence_nom'] ) {
 		$errors['urgence_nom'] = 'Indique une personne à prévenir en cas d\'accident.';
@@ -169,8 +169,8 @@ function volski_validate( $raw, $public = true ) {
 /** Prix d'une catégorie (float), ou null si aucun prix n'est fixé. */
 function volski_prix_categorie( $key, $s = null ) {
 	$s = $s ?: volski_settings();
-	$v = isset( $s['prix'][ $key ] ) ? trim( (string) $s['prix'][ $key ] ) : '';
-	return '' === $v ? null : (float) str_replace( ',', '.', $v );
+	$v = isset( $s['prix'][ $key ] ) ? volski_parse_amount( $s['prix'][ $key ] ) : '';
+	return '' === $v ? null : (float) $v;
 }
 
 /** Options proposées : liste de [ label, prix (float), max (int) ]. */
@@ -179,11 +179,11 @@ function volski_options( $s = null ) {
 	$out = array();
 	foreach ( (array) $s['options'] as $o ) {
 		if ( ! empty( $o['label'] ) ) {
-			$raw   = trim( (string) ( $o['prix'] ?? '' ) );
+			$amt   = volski_parse_amount( $o['prix'] ?? '' );
 			$out[] = array(
 				'label'    => (string) $o['label'],
-				'prix'     => (float) str_replace( ',', '.', $raw ),
-				'has_prix' => '' !== $raw,
+				'prix'     => (float) $amt,
+				'has_prix' => '' !== $amt,
 				'max'      => max( 1, (int) ( $o['max'] ?? 1 ) ),
 				'requires' => (string) ( $o['requires'] ?? '' ),
 			);
@@ -192,10 +192,25 @@ function volski_options( $s = null ) {
 	return $out;
 }
 
-/** Montant lisible : 45 € ou 45,50 €. */
+/** Devise affichée (modifiable par le filtre « volski_currency »). */
+function volski_currency() {
+	return apply_filters( 'volski_currency', 'CHF' );
+}
+
+/** Montant lisible, format suisse : 45 CHF, 45.50 CHF, 1'200 CHF. */
 function volski_money( $v ) {
 	$v = (float) $v;
-	return ( floor( $v ) == $v ? number_format( $v, 0, ',', ' ' ) : number_format( $v, 2, ',', ' ' ) ) . ' €'; // phpcs:ignore Universal.Operators.StrictComparisons
+	return ( floor( $v ) == $v ? number_format( $v, 0, '.', "'" ) : number_format( $v, 2, '.', "'" ) ) . ' ' . volski_currency(); // phpcs:ignore Universal.Operators.StrictComparisons
+}
+
+/** Lit un montant saisi : « 45 », « 45.50 », « 45,50 », « CHF 45.– », « 1'200 ». '' si vide. */
+function volski_parse_amount( $raw ) {
+	$s = strtoupper( trim( (string) $raw ) );
+	$s = str_replace( array( 'CHF', 'FR.', 'FR', '€', "'", '’', ' ', "\u{00A0}", '.–', '.-', '–' ), '', $s );
+	if ( '' === $s ) {
+		return '';
+	}
+	return max( 0, round( (float) str_replace( ',', '.', $s ), 2 ) );
 }
 
 /**
@@ -246,7 +261,7 @@ function volski_options_label( $json ) {
 	return implode( ', ', $out );
 }
 
-/** Prix d'une option à afficher : « 15 € », « Gratuit », ou rien si aucun prix n'est fixé. */
+/** Prix d'une option à afficher : « 15 CHF », « Gratuit », ou rien si aucun prix n'est fixé. */
 function volski_option_price_label( $o, $unit = false ) {
 	if ( empty( $o['has_prix'] ) ) {
 		return '';

@@ -200,7 +200,7 @@ function volski_form_shortcode() {
 		<?php if ( volski_has_prices( $s ) ) : ?>
 		<div class="volski-total" aria-live="polite">
 			<span>Total à régler</span>
-			<strong data-volski-total>0 €</strong>
+			<strong data-volski-total data-currency="<?php echo esc_attr( volski_currency() ); ?>">0 <?php echo esc_html( volski_currency() ); ?></strong>
 			<small>Pas de paiement en ligne : l'organisation te recontacte pour finaliser le règlement.</small>
 		</div>
 		<?php endif; ?>

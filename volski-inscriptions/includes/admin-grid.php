@@ -64,7 +64,7 @@ function volski_page_grid() {
 					<?php foreach ( $opts as $o ) : ?><th class="vg-opt"><?php echo esc_html( $o['label'] ); ?></th><?php endforeach; ?>
 					<th class="vg-paid">Payé</th>
 					<th>Moyen</th>
-					<th class="vg-total">Total €</th>
+					<th class="vg-total">Total <?php echo esc_html( volski_currency() ); ?></th>
 					<th>Note du comité</th>
 				</tr></thead>
 				<tbody>
@@ -100,7 +100,7 @@ function volski_page_grid() {
 						<?php endforeach; ?>
 						<td class="vg-paid"><input type="checkbox" name="rows[<?php echo $id; ?>][paye]" value="1" <?php checked( $paid ); ?> aria-label="<?php echo esc_attr( 'Payé – ' . $r['prenom'] . ' ' . $r['nom'] ); ?>"></td>
 						<td><select name="rows[<?php echo $id; ?>][mode]" aria-label="Moyen de paiement"><option value="">—</option><?php foreach ( $modes as $k => $l ) : ?><option value="<?php echo esc_attr( $k ); ?>" <?php selected( $r['paiement_mode'], $k ); ?>><?php echo esc_html( $l ); ?></option><?php endforeach; ?></select></td>
-						<td class="vg-total"><input type="text" inputmode="decimal" class="vg-num vg-money" name="rows[<?php echo $id; ?>][total]" value="<?php echo esc_attr( number_format( (float) $r['total'], 2, ',', '' ) ); ?>" aria-label="Total"></td>
+						<td class="vg-total"><input type="text" inputmode="decimal" class="vg-num vg-money" name="rows[<?php echo $id; ?>][total]" value="<?php echo esc_attr( number_format( (float) $r['total'], 2, '.', '' ) ); ?>" aria-label="Total"></td>
 						<td><input type="text" class="vg-note" name="rows[<?php echo $id; ?>][note]" value="<?php echo esc_attr( $r['note_admin'] ); ?>" aria-label="Note du comité"></td>
 					</tr>
 				<?php endforeach; ?>
@@ -169,7 +169,7 @@ function volski_grid_save() {
 		ksort( $now );
 		$opts_changed = $old !== $now;
 
-		$total = max( 0, round( (float) str_replace( array( ',', ' ', '€' ), array( '.', '', '' ), (string) ( $row['total'] ?? $r['total'] ) ), 2 ) );
+		$total = (float) volski_parse_amount( $row['total'] ?? $r['total'] );
 		if ( $opts_changed && empty( $row['total_manuel'] ) ) {
 			$total = volski_total( $r['categories'], $picked );
 		}
