@@ -45,3 +45,51 @@
 .volski-grid tr.is-changed td,.volski-grid tr.is-changed .vg-name{background:#fcf9e8}
 .volski-grid-save{position:sticky;bottom:0;background:#f0f0f1;padding:12px 0;margin:0;display:flex;align-items:center;gap:12px}
 #volski-dirty{color:#996800;font-weight:600}
+
+/* ---------- Petits écrans : le tableau de suivi et les tableaux Catégories / Options passent en fiches ---------- */
+@media (max-width: 782px) {
+	.volski-hide-mobile{display:none}
+	.volski-grid-scroll{overflow:visible;max-height:none;border:0}
+	.volski-grid{min-width:0;width:100%}
+	.volski-grid,.volski-grid tbody,.volski-grid tfoot,.volski-grid tr,.volski-grid td,.volski-grid th{display:block;width:auto}
+	.volski-grid thead{display:none}
+	.volski-grid tr{border:1px solid #dcdcde;border-radius:10px;margin:0 0 12px;overflow:hidden;background:#fff}
+	.volski-grid td,.volski-grid tfoot th{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 14px;border:0;border-top:1px solid #f0f0f1;text-align:right;min-height:48px;box-sizing:border-box}
+	.volski-grid td::before,.volski-grid tfoot th::before{content:attr(data-label);font-weight:600;text-align:left;flex:1;min-width:0}
+	.volski-grid .vg-name,.volski-grid tfoot .vg-name{position:static;display:block;text-align:left;border:0;background:#f6f7f7;min-width:0;min-height:0}
+	.volski-grid .vg-name::before{content:none}
+	.volski-grid .vg-name strong{font-size:16px}
+	.volski-grid .vg-cat{min-height:0;padding-top:6px;padding-bottom:6px;color:#646970}
+	.volski-grid .vg-opt,.volski-grid .vg-paid{text-align:right;min-width:0}
+	.volski-grid input[type=checkbox]{width:28px;height:28px;margin:0}
+	.volski-grid select{min-height:40px;max-width:60%}
+	.volski-grid .vg-money{width:110px;min-height:40px;font-size:16px}
+	.volski-grid .vg-notecell{flex-wrap:wrap}
+	.volski-grid .vg-notecell::before{flex-basis:100%}
+	.volski-grid .vg-note{width:100%;min-height:40px;font-size:16px}
+	.volski-grid tr.is-changed td,.volski-grid tr.is-changed .vg-name{background:#fcf9e8}
+	.volski-grid tr.is-changed{border-color:#dba617}
+	.volski-grid tfoot tr{background:#f6f7f7}
+	.volski-grid tfoot th{position:static;font-weight:400}
+	.volski-grid tfoot .vg-empty{display:none}
+	.volski-grid-save{position:sticky;bottom:0;z-index:5;padding:10px 0 calc(10px + env(safe-area-inset-bottom,0px));margin:0}
+	.volski-grid-save .button-hero{flex:1;justify-content:center;width:100%;min-height:50px}
+	.volski-grid-filters input[type=search]{flex:1 1 100%;min-height:44px}
+	.volski-grid-filters select{flex:1 1 40%;min-height:44px}
+	.volski-grid-filters .button{flex:1 1 100%;justify-content:center}
+
+	.volski-repeat,.volski-repeat tbody,.volski-repeat tr,.volski-repeat td{display:block;width:auto}
+	.volski-repeat thead{display:none}
+	.volski-repeat tr{border:1px solid #dcdcde;border-radius:10px;margin:0 0 10px;padding:6px 12px;background:#fff}
+	.volski-repeat td{display:flex;align-items:center;gap:10px;padding:6px 0;border:0}
+	.volski-repeat td::before{content:attr(data-label);font-weight:600;width:110px;flex:none}
+	.volski-repeat td:last-child::before{content:none}
+	.volski-repeat td:last-child{justify-content:flex-end}
+	.volski-repeat input.regular-text,.volski-repeat select{flex:1;min-width:0;width:auto}
+}
+@media (max-width: 782px) {
+	.volski-grid td .vg-money{flex:0 0 120px;width:120px;max-width:120px}
+	.volski-grid-save{flex-wrap:wrap;gap:4px}
+	.volski-grid-save .button-hero{flex:1 1 100%}
+	#volski-dirty{order:-1;font-size:13px}
+}

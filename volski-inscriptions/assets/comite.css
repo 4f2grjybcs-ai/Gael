@@ -35,3 +35,35 @@
 .volski-comite .volski-grid td{color:inherit}
 .volski-comite .volski-grid-save{background:transparent}
 .volski-comite .screen-reader-text{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ---------- Espace comité sur téléphone ---------- */
+@media (max-width: 782px) {
+	.volski.volski-comite{font-size:16px}
+	.volski-comite-bar{padding:10px 12px;font-size:14px}
+	.volski-comite-bar strong{flex-basis:100%}
+	.volski-comite .volski-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:10px 0}
+	.volski-comite .volski-stat{min-width:0;padding:8px 10px}
+	.volski-comite .volski-stat b{font-size:20px}
+	.volski-comite .volski-stat span{display:block;font-size:11.5px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+	.volski-tabs{display:grid;grid-template-columns:1fr 1fr;gap:0}
+	.volski-tabs a{text-align:center;padding:12px 6px}
+	.volski-comite .page-title-action{width:100%;justify-content:center;margin:4px 0}
+	.volski-comite .volski-intro{font-size:14px;margin:8px 0}
+	.volski-comite .volski-grid tr,.volski-comite .volski-repeat tr{background:transparent;border-color:var(--vs-line)}
+	.volski-comite .volski-grid td,.volski-comite .volski-grid tfoot th{border-top-color:var(--vs-line)}
+	.volski-comite .volski-grid .vg-name,.volski-comite .volski-grid tfoot tr{background:var(--vs-soft);color:inherit}
+	.volski-comite .volski-grid .vg-cat{color:inherit;opacity:.7}
+	.volski-comite .volski-grid tr.is-changed{border-color:#dba617}
+	.volski-comite .volski-grid-save{background:var(--wp--preset--color--base,#fff);box-shadow:0 -6px 12px rgba(0,0,0,.06)}
+	.volski-comite .form-table th{padding-top:12px}
+	.volski-comite .regular-text,.volski-comite .large-text{max-width:100%;width:100%}
+	.volski-comite input,.volski-comite select,.volski-comite textarea{font-size:16px}
+	.volski-comite .submit .button{width:100%;justify-content:center;min-height:48px}
+}
+@media (max-width: 782px) {
+	.volski-comite .volski-grid td .vg-money{flex:0 0 120px;width:120px;max-width:120px}
+	.volski-comite .volski-grid td select{flex:0 1 60%;width:auto}
+	.volski-comite .volski-grid-save{flex-wrap:wrap;gap:4px}
+	.volski-comite .volski-grid-save .button-hero{flex:1 1 100%;margin:0}
+	.volski-comite #volski-dirty{order:-1;font-size:13px}
+}

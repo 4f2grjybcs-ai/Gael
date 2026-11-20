@@ -38,8 +38,8 @@ function volski_page_grid( $front_url = '' ) {
 		<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( $f, admin_url( 'admin-post.php?action=volski_export' ) ), 'volski_export' ) ); ?>" class="page-title-action">Exporter pour Excel</a>
 		<hr class="wp-header-end">
 		<?php volski_admin_notice(); ?>
-		<p class="volski-intro">Coche, choisis, corrige directement dans le tableau, puis clique sur <strong>Enregistrer les modifications</strong>. Les lignes modifiées sont surlignées.
-		Si tu changes les options d'une personne, son total est recalculé (sauf si tu modifies aussi le total à la main).</p>
+		<p class="volski-intro">Coche, choisis, corrige directement, puis clique sur <strong>Enregistrer les modifications</strong>. Les fiches modifiées sont surlignées.<span class="volski-hide-mobile">
+		Si tu changes les options d'une personne, son total est recalculé (sauf si tu modifies aussi le total à la main).</span></p>
 
 		<form method="get" class="volski-grid-filters" action="<?php echo esc_url( strtok( $base, '?' ) ); ?>">
 			<?php
@@ -98,13 +98,13 @@ function volski_page_grid( $front_url = '' ) {
 							<?php endif; ?>
 							<span class="volski-sub"><?php echo esc_html( $r['telephone'] ); ?></span>
 						</td>
-						<td><?php echo esc_html( volski_categories_label( $r['categories'] ) ); ?></td>
+						<td class="vg-cat" data-label="Catégorie"><?php echo esc_html( volski_categories_label( $r['categories'] ) ); ?></td>
 						<?php
 						foreach ( $opts as $i => $o ) :
 							$q             = volski_opt_qty( $r['options_choisies'], $o['label'] );
 							$sum['opt'][ $i ] += $q;
 							?>
-							<td class="vg-opt">
+							<td class="vg-opt" data-label="<?php echo esc_attr( $o['label'] ); ?>">
 							<?php if ( 1 === $o['max'] ) : ?>
 								<input type="checkbox" name="rows[<?php echo $id; ?>][opt][<?php echo (int) $i; ?>]" value="1" <?php checked( $q > 0 ); ?> aria-label="<?php echo esc_attr( $o['label'] . ' – ' . $r['prenom'] . ' ' . $r['nom'] ); ?>">
 							<?php else : ?>
@@ -112,25 +112,25 @@ function volski_page_grid( $front_url = '' ) {
 							<?php endif; ?>
 							</td>
 						<?php endforeach; ?>
-						<td class="vg-paid"><input type="checkbox" name="rows[<?php echo $id; ?>][paye]" value="1" <?php checked( $paid ); ?> aria-label="<?php echo esc_attr( 'Payé – ' . $r['prenom'] . ' ' . $r['nom'] ); ?>"></td>
-						<td><select name="rows[<?php echo $id; ?>][mode]" aria-label="Moyen de paiement"><option value="">—</option><?php foreach ( $modes as $k => $l ) : ?><option value="<?php echo esc_attr( $k ); ?>" <?php selected( $r['paiement_mode'], $k ); ?>><?php echo esc_html( $l ); ?></option><?php endforeach; ?></select></td>
-						<td class="vg-total"><input type="text" inputmode="decimal" class="vg-num vg-money" name="rows[<?php echo $id; ?>][total]" value="<?php echo esc_attr( number_format( (float) $r['total'], 2, '.', '' ) ); ?>" aria-label="Total"></td>
-						<td><input type="text" class="vg-note" name="rows[<?php echo $id; ?>][note]" value="<?php echo esc_attr( $r['note_admin'] ); ?>" aria-label="Note du comité"></td>
+						<td class="vg-paid" data-label="Payé"><input type="checkbox" name="rows[<?php echo $id; ?>][paye]" value="1" <?php checked( $paid ); ?> aria-label="<?php echo esc_attr( 'Payé – ' . $r['prenom'] . ' ' . $r['nom'] ); ?>"></td>
+						<td class="vg-mode" data-label="Moyen"><select name="rows[<?php echo $id; ?>][mode]" aria-label="Moyen de paiement"><option value="">—</option><?php foreach ( $modes as $k => $l ) : ?><option value="<?php echo esc_attr( $k ); ?>" <?php selected( $r['paiement_mode'], $k ); ?>><?php echo esc_html( $l ); ?></option><?php endforeach; ?></select></td>
+						<td class="vg-total" data-label="Total <?php echo esc_attr( volski_currency() ); ?>"><input type="text" inputmode="decimal" class="vg-num vg-money" name="rows[<?php echo $id; ?>][total]" value="<?php echo esc_attr( number_format( (float) $r['total'], 2, '.', '' ) ); ?>" aria-label="Total"></td>
+						<td class="vg-notecell" data-label="Note"><input type="text" class="vg-note" name="rows[<?php echo $id; ?>][note]" value="<?php echo esc_attr( $r['note_admin'] ); ?>" aria-label="Note du comité"></td>
 					</tr>
 				<?php endforeach; ?>
 				</tbody>
 				<tfoot><tr>
 					<th class="vg-name"><?php echo count( $rows ); ?> participant<?php echo count( $rows ) > 1 ? 's' : ''; ?></th>
-					<th></th>
-					<?php foreach ( $opts as $i => $o ) : ?><th class="vg-opt"><?php echo (int) $sum['opt'][ $i ]; ?></th><?php endforeach; ?>
-					<th class="vg-paid"><?php echo (int) $sum['paye']; ?> / <?php echo count( $rows ); ?></th>
-					<th></th>
-					<th class="vg-total"><?php echo esc_html( volski_money( $sum['recu'] ) ); ?> <span class="volski-sub">sur <?php echo esc_html( volski_money( $sum['du'] ) ); ?></span></th>
-					<th></th>
+					<th class="vg-empty"></th>
+					<?php foreach ( $opts as $i => $o ) : ?><th class="vg-opt" data-label="<?php echo esc_attr( $o['label'] ); ?>"><?php echo (int) $sum['opt'][ $i ]; ?></th><?php endforeach; ?>
+					<th class="vg-paid" data-label="Payés"><?php echo (int) $sum['paye']; ?> / <?php echo count( $rows ); ?></th>
+					<th class="vg-empty"></th>
+					<th class="vg-total" data-label="Encaissé"><?php echo esc_html( volski_money( $sum['recu'] ) ); ?> <span class="volski-sub">sur <?php echo esc_html( volski_money( $sum['du'] ) ); ?></span></th>
+					<th class="vg-empty"></th>
 				</tr></tfoot>
 			</table>
 			</div>
-			<p class="volski-grid-save"><button type="submit" class="button button-primary button-hero">Enregistrer les modifications</button> <span id="volski-dirty" hidden>Modifications non enregistrées</span></p>
+			<p class="volski-grid-save"><button type="submit" class="button button-primary button-hero">Enregistrer les modifications</button> <span id="volski-dirty" hidden>Non enregistré</span></p>
 		</form>
 		<script>
 		(function () {

@@ -422,9 +422,9 @@ function volski_page_settings( $front_url = '' ) {
 				foreach ( $crows as $i => $c ) :
 					?>
 					<tr>
-						<td><input type="hidden" name="cats[<?php echo (int) $i; ?>][key]" value="<?php echo esc_attr( $c['key'] ); ?>"><input name="cats[<?php echo (int) $i; ?>][label]" class="regular-text" value="<?php echo esc_attr( $c['label'] ); ?>" placeholder="ex. Solo normal" aria-label="Nom de la catégorie"></td>
-						<td><input name="cats[<?php echo (int) $i; ?>][prix]" class="small-text" inputmode="decimal" value="<?php echo esc_attr( $c['prix'] ); ?>" aria-label="Prix"></td>
-						<td><label><input type="checkbox" name="cats[<?php echo (int) $i; ?>][passager]" value="1" <?php checked( $c['passager'], 1 ); ?>> Demander le passager</label></td>
+						<td data-label="Catégorie"><input type="hidden" name="cats[<?php echo (int) $i; ?>][key]" value="<?php echo esc_attr( $c['key'] ); ?>"><input name="cats[<?php echo (int) $i; ?>][label]" class="regular-text" value="<?php echo esc_attr( $c['label'] ); ?>" placeholder="ex. Solo normal" aria-label="Nom de la catégorie"></td>
+						<td data-label="Prix"><input name="cats[<?php echo (int) $i; ?>][prix]" class="small-text" inputmode="decimal" value="<?php echo esc_attr( $c['prix'] ); ?>" aria-label="Prix"></td>
+						<td data-label="Passager"><label><input type="checkbox" name="cats[<?php echo (int) $i; ?>][passager]" value="1" <?php checked( $c['passager'], 1 ); ?>> Demander le passager</label></td>
 						<td><button type="button" class="button-link volski-row-del">Retirer</button></td>
 					</tr>
 				<?php endforeach; ?>
@@ -447,10 +447,10 @@ function volski_page_settings( $front_url = '' ) {
 				foreach ( $rows as $i => $o ) :
 					?>
 					<tr>
-						<td><input name="options[<?php echo (int) $i; ?>][label]" class="regular-text" value="<?php echo esc_attr( $o['label'] ?? '' ); ?>" placeholder="ex. Repas du samedi soir"></td>
-						<td><input name="options[<?php echo (int) $i; ?>][prix]" class="small-text" inputmode="decimal" value="<?php echo esc_attr( $o['prix'] ?? '' ); ?>"></td>
-						<td><input name="options[<?php echo (int) $i; ?>][max]" type="number" min="1" max="20" class="small-text" value="<?php echo esc_attr( $o['max'] ?? 1 ); ?>"></td>
-						<td><select name="options[<?php echo (int) $i; ?>][requires]"><option value="">—</option>
+						<td data-label="Option"><input name="options[<?php echo (int) $i; ?>][label]" class="regular-text" value="<?php echo esc_attr( $o['label'] ?? '' ); ?>" placeholder="ex. Repas du samedi soir"></td>
+						<td data-label="Prix"><input name="options[<?php echo (int) $i; ?>][prix]" class="small-text" inputmode="decimal" value="<?php echo esc_attr( $o['prix'] ?? '' ); ?>"></td>
+						<td data-label="Max"><input name="options[<?php echo (int) $i; ?>][max]" type="number" min="1" max="20" class="small-text" value="<?php echo esc_attr( $o['max'] ?? 1 ); ?>"></td>
+						<td data-label="Seulement avec"><select name="options[<?php echo (int) $i; ?>][requires]"><option value="">—</option>
 							<?php foreach ( $parents as $pl ) : ?>
 								<?php if ( $pl !== ( $o['label'] ?? '' ) ) : ?><option value="<?php echo esc_attr( $pl ); ?>" <?php selected( $o['requires'] ?? '', $pl ); ?>><?php echo esc_html( $pl ); ?></option><?php endif; ?>
 							<?php endforeach; ?>
