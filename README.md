@@ -30,7 +30,9 @@ Le paiement ne se fait pas en ligne : l'organisation recontacte les participants
 
 ## Espace comité
 
-Menu **Vol & Ski → Comité** (réservé aux administrateurs) : ajoute un membre avec son prénom et son e-mail. Il reçoit un e-mail pour choisir son mot de passe.
+Menu **Vol & Ski → Comité** (réservé aux administrateurs). Deux façons de faire :
+- **un compte partagé** par tout le comité : remplis « Prénom ou nom du compte », « Identifiant » et « Mot de passe » (e-mail facultatif) ; le compte est utilisable tout de suite ;
+- **un compte par personne** : prénom + e-mail ; la personne reçoit un e-mail pour choisir son mot de passe.
 
 Les membres se connectent sur `tonsite.fr/wp-login.php` et arrivent directement sur les inscriptions. Ils voient **uniquement** l'extension (inscriptions, infos compétition) et leur profil : aucune page, aucun article, aucun réglage du site. Toute autre adresse de l'admin les renvoie sur les inscriptions. Ils ne peuvent pas ajouter d'autres membres.
 

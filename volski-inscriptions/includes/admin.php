@@ -55,6 +55,7 @@ function volski_admin_notice() {
 		'settings' => 'Infos enregistrées.',
 		'bulk'     => 'Inscriptions mises à jour.',
 		'member'   => 'Membre ajouté. Il a reçu un e-mail pour choisir son mot de passe.',
+		'member_pw' => 'Compte créé avec le mot de passe choisi. Il peut se connecter tout de suite.',
 		'removed'  => 'Membre retiré du comité.',
 	);
 	$k = isset( $_GET['msg'] ) ? sanitize_key( $_GET['msg'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
@@ -406,9 +407,11 @@ function volski_page_comite() {
 			<input type="hidden" name="action" value="volski_comite_add">
 			<?php wp_nonce_field( 'volski_comite_add' ); ?>
 			<table class="form-table" role="presentation">
-				<tr><th scope="row"><label for="vc-prenom">Prénom</label></th><td><input id="vc-prenom" name="prenom" class="regular-text" required></td></tr>
+				<tr><th scope="row"><label for="vc-prenom">Prénom ou nom du compte</label></th><td><input id="vc-prenom" name="prenom" class="regular-text" required></td></tr>
 				<tr><th scope="row"><label for="vc-nom">Nom</label></th><td><input id="vc-nom" name="nom" class="regular-text"></td></tr>
-				<tr><th scope="row"><label for="vc-email">E-mail</label></th><td><input id="vc-email" type="email" name="email" class="regular-text" required><p class="description">La personne reçoit un e-mail avec son identifiant et un lien pour choisir son mot de passe.</p></td></tr>
+				<tr><th scope="row"><label for="vc-email">E-mail</label></th><td><input id="vc-email" type="email" name="email" class="regular-text"><p class="description">Facultatif si tu choisis le mot de passe ci-dessous. Sinon, la personne reçoit un e-mail pour choisir elle-même son mot de passe.</p></td></tr>
+				<tr><th scope="row"><label for="vc-login">Identifiant</label></th><td><input id="vc-login" name="login" class="regular-text" autocomplete="off"><p class="description">Facultatif. Laisse vide pour « prénom.nom ». Pour un compte partagé par tout le comité, par exemple : Comité.</p></td></tr>
+				<tr><th scope="row"><label for="vc-pass">Mot de passe</label></th><td><input id="vc-pass" type="text" name="pass" class="regular-text" autocomplete="new-password" minlength="8"><p class="description">Facultatif. Au moins 8 caractères. Tu le communiques toi-même au comité.</p></td></tr>
 			</table>
 			<?php submit_button( 'Ajouter au comité' ); ?>
 		</form>
@@ -422,29 +425,53 @@ function volski_admin_comite_add() {
 	$prenom = sanitize_text_field( $p['prenom'] ?? '' );
 	$nom    = sanitize_text_field( $p['nom'] ?? '' );
 	$email  = sanitize_email( $p['email'] ?? '' );
-	if ( ! $prenom || ! is_email( $email ) ) {
-		volski_back( array( 'err' => 'Indique au moins un prénom et une adresse e-mail valide.' ), 'volski-comite' );
+	$pass   = (string) ( $p['pass'] ?? '' );
+	$login  = sanitize_user( trim( (string) ( $p['login'] ?? '' ) ), true );
+	$err    = function ( $m ) {
+		volski_back( array( 'err' => $m ), 'volski-comite' );
+	};
+	if ( ! $prenom ) {
+		$err( 'Indique au moins un prénom ou un nom pour le compte.' );
 	}
-	$existing = get_user_by( 'email', $email );
+	if ( '' !== $pass && strlen( $pass ) < 8 ) {
+		$err( 'Le mot de passe doit faire au moins 8 caractères.' );
+	}
+	if ( '' === $pass && ! is_email( $email ) ) {
+		$err( 'Indique une adresse e-mail valide, ou choisis un mot de passe.' );
+	}
+	if ( '' !== $email && ! is_email( $email ) ) {
+		$err( 'Cette adresse e-mail n\'est pas valide.' );
+	}
+
+	$existing = $email ? get_user_by( 'email', $email ) : false;
+	if ( ! $existing && '' !== $login ) {
+		$existing = get_user_by( 'login', $login );
+	}
 	if ( $existing ) {
 		if ( user_can( $existing, 'manage_options' ) ) {
-			volski_back( array( 'err' => 'Cette adresse appartient à un administrateur : il a déjà accès à tout.' ), 'volski-comite' );
+			$err( 'Ce compte appartient à un administrateur : il a déjà accès à tout.' );
 		}
-		// Compte existant (ex. abonné) : on lui donne seulement le rôle du comité.
+		// Compte existant : on lui donne seulement le rôle du comité (et le mot de passe choisi, s'il y en a un).
 		$existing->set_role( VOLSKI_ROLE );
-		volski_back( array( 'msg' => 'member' ), 'volski-comite' );
+		if ( '' !== $pass ) {
+			wp_set_password( $pass, $existing->ID );
+		}
+		volski_back( array( 'msg' => '' !== $pass ? 'member_pw' : 'member' ), 'volski-comite' );
 	}
-	$base  = sanitize_user( remove_accents( strtolower( $prenom . ( $nom ? '.' . $nom : '' ) ) ), true );
-	$base  = preg_replace( '/[^a-z0-9._-]/', '', str_replace( ' ', '', $base ) ) ?: 'comite';
-	$login = $base;
-	for ( $i = 2; username_exists( $login ); $i++ ) {
-		$login = $base . $i;
+
+	if ( '' === $login ) {
+		$base  = sanitize_user( strtolower( $prenom . ( $nom ? '.' . $nom : '' ) ), true );
+		$base  = preg_replace( '/[^a-z0-9._-]/', '', str_replace( ' ', '', $base ) ) ?: 'comite';
+		$login = $base;
+		for ( $i = 2; username_exists( $login ); $i++ ) {
+			$login = $base . $i;
+		}
 	}
 	$uid = wp_insert_user(
 		array(
 			'user_login'   => $login,
 			'user_email'   => $email,
-			'user_pass'    => wp_generate_password( 24 ),
+			'user_pass'    => '' !== $pass ? $pass : wp_generate_password( 24 ),
 			'first_name'   => $prenom,
 			'last_name'    => $nom,
 			'display_name' => trim( $prenom . ' ' . $nom ),
@@ -452,10 +479,13 @@ function volski_admin_comite_add() {
 		)
 	);
 	if ( is_wp_error( $uid ) ) {
-		volski_back( array( 'err' => $uid->get_error_message() ), 'volski-comite' );
+		$err( $uid->get_error_message() );
 	}
-	wp_new_user_notification( $uid, null, 'user' );
-	volski_back( array( 'msg' => 'member' ), 'volski-comite' );
+	if ( '' === $pass ) {
+		wp_new_user_notification( $uid, null, 'user' );
+		volski_back( array( 'msg' => 'member' ), 'volski-comite' );
+	}
+	volski_back( array( 'msg' => 'member_pw' ), 'volski-comite' );
 }
 
 function volski_admin_comite_remove() {
