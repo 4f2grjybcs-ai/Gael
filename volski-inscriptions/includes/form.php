@@ -241,16 +241,18 @@ function volski_tarif_cards( $s, $values = array(), $interactive = true ) {
 		$common   = ' form="volski-form" data-volski-opt="' . esc_attr( $o['label'] ) . '" data-prix="' . esc_attr( (string) $o['prix'] ) . '"';
 		$classes  = 'volski-tcard' . ( $o['oblig'] ? ' is-oblig' : '' ) . ( $interactive ? '' : ' is-static' );
 		if ( ! $interactive ) {
-			echo '<div class="' . esc_attr( $classes ) . '"' . $req_attr . '><span class="volski-tcard-name">' . esc_html( $o['label'] ) . '</span>' . ( $price ? '<strong class="volski-tcard-price">' . esc_html( $price ) . '</strong>' : '' ) . ( $o['oblig'] ? '<span class="volski-tcard-state">Inclus</span>' : '' ) . '</div>'; // phpcs:ignore
+			echo '<div class="' . esc_attr( $classes ) . '"' . $req_attr . '><span class="volski-tcard-name">' . esc_html( $o['label'] ) . '</span>' . ( $price ? '<strong class="volski-tcard-price">' . esc_html( $price ) . '</strong>' : '' ) . ( $o['oblig'] ? '<small class="volski-tcard-note">Inclus d\'office</small>' : '' ) . '</div>'; // phpcs:ignore
 			continue;
 		}
 		if ( 1 === $o['max'] ) {
 			echo '<label class="' . esc_attr( $classes ) . '"' . $req_attr . '>'; // phpcs:ignore
 			echo '<input type="checkbox" class="volski-tcard-input" name="opt[' . (int) $i . ']" value="1"' . $common . checked( $q > 0, true, false ) . ( $o['oblig'] ? ' disabled' : '' ) . '>'; // phpcs:ignore
+			echo '<span class="volski-tcard-state" aria-hidden="true" data-on="✓" data-off="+"></span>';
 			echo '<span class="volski-tcard-name">' . esc_html( $o['label'] ) . '</span>';
 			echo $price ? '<strong class="volski-tcard-price">' . esc_html( $price ) . '</strong>' : '';
-			echo '<span class="volski-tcard-state" aria-hidden="true" data-on="' . ( $o['oblig'] ? 'Inclus' : 'Choisi ✓' ) . '" data-off="Ajouter"></span>';
-			if ( $o['requires'] ) {
+			if ( $o['oblig'] ) {
+				echo '<small class="volski-tcard-note">Inclus d\'office</small>';
+			} elseif ( $o['requires'] ) {
 				echo '<small class="volski-tcard-note">Avec « ' . esc_html( $o['requires'] ) . ' »</small>';
 			}
 			echo '</label>';
@@ -259,10 +261,10 @@ function volski_tarif_cards( $s, $values = array(), $interactive = true ) {
 			$min = $o['oblig'] ? 1 : 0;
 			echo '<button type="button" class="' . esc_attr( $classes . ' is-qty' . ( $q > 0 ? ' is-on' : '' ) ) . '"' . $req_attr . ' data-volski-cycle data-label="' . esc_attr( $o['label'] ) . '">'; // phpcs:ignore
 			echo '<input type="hidden" class="volski-qty" name="opt[' . (int) $i . ']" value="' . (int) $q . '" data-min="' . (int) $min . '" data-max="' . (int) $o['max'] . '"' . $common . '>'; // phpcs:ignore
+			echo '<span class="volski-tcard-qty" aria-hidden="true">' . ( $q > 0 ? '×' . (int) $q : '+' ) . '</span>';
 			echo '<span class="volski-tcard-name">' . esc_html( $o['label'] ) . '</span>';
 			echo $price ? '<strong class="volski-tcard-price">' . esc_html( $price ) . '</strong>' : '';
-			echo '<span class="volski-tcard-qty" aria-hidden="true">' . ( $q > 0 ? '× ' . (int) $q : 'Ajouter' ) . '</span>';
-			echo '<small class="volski-tcard-note">' . ( $price ? 'Par personne · ' : '' ) . 'jusqu\'à ' . (int) $o['max'] . ( $o['requires'] ? ' · avec « ' . esc_html( $o['requires'] ) . ' »' : '' ) . '</small>';
+			echo '<small class="volski-tcard-note">Touche pour ajouter · jusqu\'à ' . (int) $o['max'] . ( $o['requires'] ? ' · avec « ' . esc_html( $o['requires'] ) . ' »' : '' ) . '</small>';
 			echo '</button>';
 		}
 	}

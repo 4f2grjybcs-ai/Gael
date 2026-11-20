@@ -425,7 +425,7 @@ function volski_page_settings( $front_url = '' ) {
 						<td data-label="Catégorie"><input type="hidden" name="cats[<?php echo (int) $i; ?>][key]" value="<?php echo esc_attr( $c['key'] ); ?>"><input name="cats[<?php echo (int) $i; ?>][label]" class="regular-text" value="<?php echo esc_attr( $c['label'] ); ?>" placeholder="ex. Solo normal" aria-label="Nom de la catégorie"></td>
 						<td data-label="Prix"><input name="cats[<?php echo (int) $i; ?>][prix]" class="small-text" inputmode="decimal" value="<?php echo esc_attr( $c['prix'] ); ?>" aria-label="Prix"></td>
 						<td data-label="Passager"><label><input type="checkbox" name="cats[<?php echo (int) $i; ?>][passager]" value="1" <?php checked( $c['passager'], 1 ); ?>> Demander le passager</label></td>
-						<td><button type="button" class="button-link volski-row-del">Retirer</button></td>
+						<td class="volski-row-tools"><button type="button" class="button volski-row-up" aria-label="Monter">↑</button><button type="button" class="button volski-row-down" aria-label="Descendre">↓</button><button type="button" class="button-link volski-row-del">Retirer</button></td>
 					</tr>
 				<?php endforeach; ?>
 				</tbody>
@@ -435,7 +435,7 @@ function volski_page_settings( $front_url = '' ) {
 
 
 			<h2>Tarifs</h2>
-			<p class="description">Les cartes à sélectionner dans la section « Tarifs » de la page, avec le total en direct. Ex. Inscription 35, Souper 40, Abonnement télécabine.<br>
+			<p class="description">Les cartes à sélectionner dans la section « Tarifs » de la page, avec le total en direct. Ex. Inscription 35, Souper 40, Abonnement télécabine. Les flèches ↑ ↓ règlent l'ordre d'affichage.<br>
 			« Obligatoire » : toujours compté, carte marquée « Inclus » (ex. Inscription). « Max » : quantité maximale par personne (1 = à cocher). « Seulement avec » : proposé seulement si l'autre est choisi (ex. « +1 au souper » avec « Souper »). Prix vide = pas de prix affiché ; 0 = « Gratuit ».</p>
 			<table class="widefat volski-opts-admin volski-repeat" id="volski-opts">
 				<thead><tr><th>Tarif</th><th>Prix (<?php echo esc_html( volski_currency() ); ?>)</th><th>Obligatoire</th><th>Max</th><th>Seulement avec</th><th></th></tr></thead>
@@ -456,7 +456,7 @@ function volski_page_settings( $front_url = '' ) {
 								<?php if ( $pl !== ( $o['label'] ?? '' ) ) : ?><option value="<?php echo esc_attr( $pl ); ?>" <?php selected( $o['requires'] ?? '', $pl ); ?>><?php echo esc_html( $pl ); ?></option><?php endif; ?>
 							<?php endforeach; ?>
 						</select></td>
-						<td><button type="button" class="button-link volski-row-del">Retirer</button></td>
+						<td class="volski-row-tools"><button type="button" class="button volski-row-up" aria-label="Monter">↑</button><button type="button" class="button volski-row-down" aria-label="Descendre">↓</button><button type="button" class="button-link volski-row-del">Retirer</button></td>
 					</tr>
 				<?php endforeach; ?>
 				</tbody>
@@ -487,9 +487,24 @@ function volski_page_settings( $front_url = '' ) {
 				});
 				document.querySelectorAll('.volski-repeat tbody').forEach(function (tb) {
 					tb.addEventListener('click', function (e) {
-						if (!e.target.classList.contains('volski-row-del')) return;
-						var tr = e.target.closest('tr');
-						if (tb.children.length > 1) tr.remove(); else reset(tr, 0);
+						var btn = e.target.closest('button'); if (!btn) return;
+						var tr = btn.closest('tr');
+						if (btn.classList.contains('volski-row-del')) {
+							if (tb.children.length > 1) tr.remove(); else reset(tr, 0);
+						} else if (btn.classList.contains('volski-row-up') && tr.previousElementSibling) {
+							tb.insertBefore(tr, tr.previousElementSibling); btn.focus();
+						} else if (btn.classList.contains('volski-row-down') && tr.nextElementSibling) {
+							tb.insertBefore(tr.nextElementSibling, tr); btn.focus();
+						}
+					});
+				});
+				// À l'enregistrement, numérote les lignes dans l'ordre affiché : c'est l'ordre de la page.
+				var formEl = document.querySelector('#volski-cats') && document.querySelector('#volski-cats').closest('form');
+				if (formEl) formEl.addEventListener('submit', function () {
+					document.querySelectorAll('.volski-repeat tbody').forEach(function (tb) {
+						Array.prototype.forEach.call(tb.children, function (tr, n) {
+							tr.querySelectorAll('input,select').forEach(function (i) { i.name = i.name.replace(/\[\d+\]/, '[' + n + ']'); });
+						});
 					});
 				});
 			})();

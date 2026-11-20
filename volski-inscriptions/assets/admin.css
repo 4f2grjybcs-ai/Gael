@@ -93,3 +93,7 @@
 	.volski-grid-save .button-hero{flex:1 1 100%}
 	#volski-dirty{order:-1;font-size:13px}
 }
+.volski-row-tools{white-space:nowrap}
+.volski-row-tools .button{min-width:34px;padding:0 6px;margin-right:4px}
+.volski-row-tools .volski-row-del{margin-left:8px}
+.volski-repeat tbody tr:first-child .volski-row-up,.volski-repeat tbody tr:last-child .volski-row-down{opacity:.35}

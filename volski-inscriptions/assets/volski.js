@@ -17,7 +17,7 @@
 	var paint = function (card) {
 		var input = card.querySelector('.volski-qty'), q = parseInt(input.value, 10) || 0, max = maxOf(input);
 		card.classList.toggle('is-on', q > 0);
-		card.querySelector('.volski-tcard-qty').textContent = q > 0 ? '× ' + q : 'Ajouter';
+		card.querySelector('.volski-tcard-qty').textContent = q > 0 ? '×' + q : '+';
 		card.setAttribute('aria-label', card.getAttribute('data-label') + ' : ' + (q > 0 ? q + ' sur ' + max : 'aucun') + '. Toucher pour changer.');
 	};
 	document.querySelectorAll('[data-volski-cycle]').forEach(function (card) {
