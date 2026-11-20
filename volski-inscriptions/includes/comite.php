@@ -9,22 +9,44 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-/** Vrai si l'utilisateur est un membre du comité sans autre rôle sur le site. */
+/**
+ * Vrai pour un membre du comité qui n'a aucun autre droit d'édition sur le site
+ * (rôle « Comité Vol & Ski », éventuellement avec un rôle client ou abonné à côté).
+ */
 function volski_is_comite_only( $user = null ) {
 	$user = $user ?: wp_get_current_user();
 	if ( ! $user || ! $user->exists() ) {
 		return false;
 	}
-	$roles = array_values( (array) $user->roles );
-	return array( VOLSKI_ROLE ) === $roles;
+	return user_can( $user, VOLSKI_CAP ) && ! user_can( $user, 'edit_posts' ) && ! user_can( $user, 'manage_options' );
 }
+
+// Répare le rôle s'il a disparu ou perdu son droit (mise à jour par téléversement, extension de rôles…).
+add_action(
+	'init',
+	function () {
+		$role  = get_role( VOLSKI_ROLE );
+		$admin = get_role( 'administrator' );
+		if ( ! $role || ! $role->has_cap( VOLSKI_CAP ) || ( $admin && ! $admin->has_cap( VOLSKI_CAP ) ) ) {
+			volski_install_roles();
+		}
+	}
+);
+
+// WooCommerce et certaines extensions renvoient hors de l'administration les comptes qui ne sont pas « staff ».
+add_filter(
+	'woocommerce_prevent_admin_access',
+	function ( $prevent ) {
+		return volski_is_comite_only() ? false : $prevent;
+	}
+);
 
 // Après la connexion : directement sur les inscriptions.
 add_filter(
 	'login_redirect',
 	function ( $to, $requested, $user ) {
 		if ( $user instanceof WP_User && volski_is_comite_only( $user ) ) {
-			return admin_url( 'admin.php?page=volski' );
+			return volski_comite_page_url() ?: admin_url( 'admin.php?page=volski' );
 		}
 		return $to;
 	},
@@ -56,10 +78,21 @@ add_action(
 add_action(
 	'admin_page_access_denied',
 	function () {
-		if ( volski_is_comite_only() ) {
+		if ( ! volski_is_comite_only() ) {
+			return;
+		}
+		$page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
+		if ( 0 !== strpos( $page, 'volski' ) ) {
 			wp_safe_redirect( admin_url( 'admin.php?page=volski' ) );
 			exit;
 		}
+		// Déjà sur une page Vol & Ski refusée : pas de boucle, on propose l'espace comité du site.
+		$front = volski_comite_page_url();
+		wp_die(
+			'Cet écran n\'est pas accessible avec ce compte.' . ( $front ? ' <a href="' . esc_url( $front ) . '">Ouvrir l\'espace comité</a>' : '' ),
+			'Accès limité',
+			array( 'response' => 403 )
+		);
 	}
 );
 

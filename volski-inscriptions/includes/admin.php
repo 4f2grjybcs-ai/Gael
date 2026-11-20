@@ -43,8 +43,16 @@ function volski_check( $action, $cap = VOLSKI_CAP ) {
 	check_admin_referer( $action );
 }
 
+/** Bouton d'envoi (fonctionne aussi hors de l'administration, dans l'espace comité). */
+function volski_submit( $label ) {
+	echo '<p class="submit"><button type="submit" id="submit" class="button button-primary">' . esc_html( $label ) . '</button></p>';
+}
+
 function volski_back( $args = array(), $page = 'volski' ) {
-	wp_safe_redirect( add_query_arg( $args, admin_url( 'admin.php?page=' . $page ) ) );
+	// Depuis l'espace comité du site : on y revient.
+	$ret = isset( $_POST['volski_return'] ) ? wp_validate_redirect( esc_url_raw( wp_unslash( $_POST['volski_return'] ) ), '' ) : ''; // phpcs:ignore WordPress.Security.NonceVerification
+	$url = $ret ? remove_query_arg( array( 'msg', 'err', 'n', 'vq', 'vcat', 'vpay' ), $ret ) : admin_url( 'admin.php?page=' . $page );
+	wp_safe_redirect( add_query_arg( $args, $url ) );
 	exit;
 }
 
@@ -155,14 +163,20 @@ function volski_page_inscriptions() {
 /** Filtres de la liste (catégorie, sexe, paiement, recherche) lus dans l'URL. */
 function volski_current_filters() {
 	// phpcs:disable WordPress.Security.NonceVerification
-	$f = array();
-	foreach ( array( 'cat', 'sexe', 'paiement' ) as $k ) {
-		if ( ! empty( $_REQUEST[ $k ] ) ) {
-			$f[ $k ] = sanitize_key( wp_unslash( $_REQUEST[ $k ] ) );
+	// Noms courts dans l'admin ; préfixés « v… » dans le tableau de suivi (s et cat sont déjà pris par WordPress sur le site).
+	$f   = array();
+	$map = array( 'cat' => array( 'cat', 'vcat' ), 'sexe' => array( 'sexe', 'vsexe' ), 'paiement' => array( 'paiement', 'vpay' ) );
+	foreach ( $map as $k => $names ) {
+		foreach ( $names as $n ) {
+			if ( ! empty( $_REQUEST[ $n ] ) ) {
+				$f[ $k ] = sanitize_key( wp_unslash( $_REQUEST[ $n ] ) );
+			}
 		}
 	}
-	if ( ! empty( $_REQUEST['s'] ) ) {
-		$f['s'] = sanitize_text_field( wp_unslash( $_REQUEST['s'] ) );
+	foreach ( array( 's', 'vq' ) as $n ) {
+		if ( ! empty( $_REQUEST[ $n ] ) && is_string( $_REQUEST[ $n ] ) ) {
+			$f['s'] = sanitize_text_field( wp_unslash( $_REQUEST[ $n ] ) );
+		}
 	}
 	// phpcs:enable
 	return $f;
@@ -246,13 +260,13 @@ function volski_page_edit( $id ) {
 						<label class="volski-radio"><input type="radio" name="categories[]" value="<?php echo esc_attr( $k ); ?>" <?php checked( isset( $cats[0] ) && $cats[0] === $k ); ?>> <?php echo esc_html( $l ); ?></label>
 					<?php endforeach; ?>
 				</fieldset></td></tr>
-				<?php $f( 'passager', 'Passager biplace' ); ?>
+				<?php $f( 'passager', 'Passager' ); ?>
 				<?php $f( 'urgence_nom', 'Contact d\'urgence' ); ?>
 				<?php $f( 'urgence_tel', 'Tél. d\'urgence', 'tel' ); ?>
 				<tr><th scope="row"><label for="vs-com">Commentaire du participant</label></th><td><textarea id="vs-com" name="commentaire" rows="3" class="large-text"><?php echo esc_textarea( $r['commentaire'] ); ?></textarea></td></tr>
 				<tr><th scope="row">Liste publique</th><td><label><input type="checkbox" name="afficher_public" value="1" <?php checked( (int) $r['afficher_public'], 1 ); ?>> Afficher dans la liste publique des inscrits</label></td></tr>
 			</table>
-			<?php submit_button( $id ? 'Enregistrer' : 'Ajouter l\'inscription' ); ?>
+			<?php volski_submit( $id ? 'Enregistrer' : 'Ajouter l\'inscription' ); ?>
 		</form>
 		<?php if ( $id ) : ?>
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="volski-delete" onsubmit="return window.confirm('Supprimer définitivement cette inscription ?');">
@@ -337,7 +351,7 @@ function volski_admin_export() {
 	foreach ( $cats as $l ) {
 		$head[] = $l;
 	}
-	$head = array_merge( $head, array( 'Passager biplace', 'E-mail', 'Téléphone', 'Contact d\'urgence', 'Tél. d\'urgence', 'Options' ) );
+	$head = array_merge( $head, array( 'Passager', 'E-mail', 'Téléphone', 'Contact d\'urgence', 'Tél. d\'urgence', 'Options' ) );
 	$opts = volski_options();
 	foreach ( $opts as $o ) {
 		$head[] = $o['label'];
@@ -369,18 +383,20 @@ function volski_admin_export() {
 
 /* ---------------------------------------------------------------- Infos compétition */
 
-function volski_page_settings() {
+function volski_page_settings( $front_url = '' ) {
 	if ( ! current_user_can( VOLSKI_CAP ) ) {
 		return;
 	}
-	$s = volski_settings();
+	$front_url = is_string( $front_url ) ? $front_url : '';
+	$s         = volski_settings();
 	?>
 	<div class="wrap volski-admin">
-		<h1>Infos compétition</h1>
+		<?php if ( ! $front_url ) : ?><h1>Infos compétition</h1><?php endif; ?>
 		<p class="volski-intro">Tout ce qui s'affiche sur la page de l'événement. Les champs laissés vides ne sont pas affichés.</p>
 		<?php volski_admin_notice(); ?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="volski_settings">
+			<?php if ( $front_url ) : ?><input type="hidden" name="volski_return" value="<?php echo esc_url( $front_url ); ?>"><?php endif; ?>
 			<?php wp_nonce_field( 'volski_settings' ); ?>
 			<h2>La page de l'événement</h2>
 			<table class="form-table" role="presentation">
@@ -395,17 +411,33 @@ function volski_page_settings() {
 				<tr><th scope="row"><label for="vs-contact">Contact</label></th><td><textarea id="vs-contact" name="contact" rows="2" class="large-text" placeholder="ex. Julien – 06 12 34 56 78"><?php echo esc_textarea( $s['contact'] ); ?></textarea></td></tr>
 			</table>
 
-			<h2>Tarifs</h2>
-			<table class="form-table" role="presentation">
-				<?php foreach ( volski_categories() as $k => $l ) : ?>
-				<tr><th scope="row"><label for="vs-prix-<?php echo esc_attr( $k ); ?>"><?php echo esc_html( $l ); ?></label></th><td><input id="vs-prix-<?php echo esc_attr( $k ); ?>" name="prix[<?php echo esc_attr( $k ); ?>]" class="small-text" inputmode="decimal" value="<?php echo esc_attr( $s['prix'][ $k ] ?? '' ); ?>"> <?php echo esc_html( volski_currency() ); ?></td></tr>
+			<h2>Catégories et tarifs</h2>
+			<p class="description">Chaque pilote choisit une seule catégorie. Renomme, ajoute ou retire librement. Coche « Passager » pour demander le nom du passager (ex. Biplace). Prix vide = pas de prix affiché.</p>
+			<table class="widefat volski-opts-admin volski-repeat" id="volski-cats">
+				<thead><tr><th>Catégorie</th><th>Prix (<?php echo esc_html( volski_currency() ); ?>)</th><th>Passager</th><th></th></tr></thead>
+				<tbody>
+				<?php
+				$crows   = volski_category_rows( $s );
+				$crows[] = array( 'key' => '', 'label' => '', 'prix' => '', 'passager' => 0 );
+				foreach ( $crows as $i => $c ) :
+					?>
+					<tr>
+						<td><input type="hidden" name="cats[<?php echo (int) $i; ?>][key]" value="<?php echo esc_attr( $c['key'] ); ?>"><input name="cats[<?php echo (int) $i; ?>][label]" class="regular-text" value="<?php echo esc_attr( $c['label'] ); ?>" placeholder="ex. Solo normal" aria-label="Nom de la catégorie"></td>
+						<td><input name="cats[<?php echo (int) $i; ?>][prix]" class="small-text" inputmode="decimal" value="<?php echo esc_attr( $c['prix'] ); ?>" aria-label="Prix"></td>
+						<td><label><input type="checkbox" name="cats[<?php echo (int) $i; ?>][passager]" value="1" <?php checked( $c['passager'], 1 ); ?>> Demander le passager</label></td>
+						<td><button type="button" class="button-link volski-row-del">Retirer</button></td>
+					</tr>
 				<?php endforeach; ?>
-				<tr><th scope="row"><label for="vs-tnote">Précision</label></th><td><input id="vs-tnote" name="tarif_note" class="large-text" value="<?php echo esc_attr( $s['tarif_note'] ); ?>" placeholder="ex. Forfait de ski non compris."><p class="description">Laisse un prix vide pour ne pas l'afficher. Chaque pilote choisit une seule catégorie.</p></td></tr>
+				</tbody>
+			</table>
+			<p><button type="button" class="button volski-row-add" data-table="volski-cats">+ Ajouter une catégorie</button></p>
+			<table class="form-table" role="presentation">
+				<tr><th scope="row"><label for="vs-tnote">Précision sur les tarifs</label></th><td><input id="vs-tnote" name="tarif_note" class="large-text" value="<?php echo esc_attr( $s['tarif_note'] ); ?>" placeholder="ex. Forfait de ski non compris."></td></tr>
 			</table>
 
 			<h2>Options</h2>
 			<p class="description">Ce que les participants peuvent ajouter à leur inscription. « Max » = quantité maximale par personne (1 = une case à cocher). « Seulement avec » : l'option n'est proposée que si l'autre est choisie (ex. « +1 au souper » seulement avec « Souper »). Prix vide = pas de prix affiché ; 0 = « Gratuit ».</p>
-			<table class="widefat volski-opts-admin" id="volski-opts">
+			<table class="widefat volski-opts-admin volski-repeat" id="volski-opts">
 				<thead><tr><th>Option</th><th>Prix (<?php echo esc_html( volski_currency() ); ?>)</th><th>Max</th><th>Seulement avec</th><th></th></tr></thead>
 				<tbody>
 				<?php
@@ -423,29 +455,38 @@ function volski_page_settings() {
 								<?php if ( $pl !== ( $o['label'] ?? '' ) ) : ?><option value="<?php echo esc_attr( $pl ); ?>" <?php selected( $o['requires'] ?? '', $pl ); ?>><?php echo esc_html( $pl ); ?></option><?php endif; ?>
 							<?php endforeach; ?>
 						</select></td>
-						<td><button type="button" class="button-link volski-opt-del">Retirer</button></td>
+						<td><button type="button" class="button-link volski-row-del">Retirer</button></td>
 					</tr>
 				<?php endforeach; ?>
 				</tbody>
 			</table>
-			<p><button type="button" class="button" id="volski-opt-add">+ Ajouter une option</button></p>
+			<p><button type="button" class="button volski-row-add" data-table="volski-opts">+ Ajouter une option</button></p>
 			<script>
 			(function () {
-				var tb = document.querySelector('#volski-opts tbody');
-				document.getElementById('volski-opt-add').addEventListener('click', function () {
-					var last = tb.lastElementChild, row = last.cloneNode(true), n = tb.children.length;
-					row.querySelectorAll('input').forEach(function (i) {
-						i.name = i.name.replace(/options\[\d+\]/, 'options[' + n + ']');
-						i.value = i.name.indexOf('[max]') > 0 ? 1 : '';
+				// Lignes à ajouter / retirer dans les tableaux Catégories et Options.
+				var reset = function (row, n) {
+					row.querySelectorAll('input,select').forEach(function (i) {
+						i.name = i.name.replace(/\[\d+\]/, '[' + n + ']');
+						if (i.type === 'checkbox') i.checked = false;
+						else if (i.name.indexOf('[max]') > 0) i.value = 1;
+						else i.value = '';
 					});
-					row.querySelectorAll('select').forEach(function (sel) { sel.name = sel.name.replace(/options\[\d+\]/, 'options[' + n + ']'); sel.value = ''; });
-					tb.appendChild(row);
-					row.querySelector('input').focus();
+				};
+				document.querySelectorAll('.volski-row-add').forEach(function (btn) {
+					btn.addEventListener('click', function () {
+						var tb = document.querySelector('#' + btn.getAttribute('data-table') + ' tbody');
+						var row = tb.lastElementChild.cloneNode(true);
+						reset(row, tb.children.length + 100);
+						tb.appendChild(row);
+						row.querySelector('input:not([type=hidden])').focus();
+					});
 				});
-				tb.addEventListener('click', function (e) {
-					if (!e.target.classList.contains('volski-opt-del')) return;
-					var tr = e.target.closest('tr');
-					if (tb.children.length > 1) tr.remove(); else tr.querySelectorAll('input').forEach(function (i) { i.value = i.name.indexOf('[max]') > 0 ? 1 : ''; });
+				document.querySelectorAll('.volski-repeat tbody').forEach(function (tb) {
+					tb.addEventListener('click', function (e) {
+						if (!e.target.classList.contains('volski-row-del')) return;
+						var tr = e.target.closest('tr');
+						if (tb.children.length > 1) tr.remove(); else reset(tr, 0);
+					});
 				});
 			})();
 			</script>
@@ -458,7 +499,7 @@ function volski_page_settings() {
 				<tr><th scope="row"><label for="vs-regl">Lien du règlement</label></th><td><input id="vs-regl" type="url" name="reglement_url" class="regular-text" value="<?php echo esc_attr( $s['reglement_url'] ); ?>" placeholder="https://…"><p class="description">Facultatif. Affiché dans la case à cocher du formulaire.</p></td></tr>
 				<tr><th scope="row">Liste publique</th><td><label><input type="checkbox" name="liste_publique" value="1" <?php checked( $s['liste_publique'], 1 ); ?>> Activer la liste publique des inscrits</label></td></tr>
 			</table>
-			<?php submit_button( 'Enregistrer' ); ?>
+			<?php volski_submit( 'Enregistrer' ); ?>
 		</form>
 		<?php if ( current_user_can( 'manage_options' ) ) : ?>
 		<h2>Afficher sur le site</h2>
@@ -472,10 +513,30 @@ function volski_page_settings() {
 function volski_admin_save_settings() {
 	volski_check( 'volski_settings' );
 	$p = wp_unslash( $_POST );
-	$prix = array();
-	foreach ( volski_categories() as $k => $l ) {
-		$v          = volski_parse_amount( $p['prix'][ $k ] ?? '' );
-		$prix[ $k ] = '' === $v ? '' : (string) $v;
+	$cats = array();
+	$used = array();
+	foreach ( (array) ( $p['cats'] ?? array() ) as $c ) {
+		$label = mb_substr( sanitize_text_field( $c['label'] ?? '' ), 0, 60 );
+		if ( '' === $label ) {
+			continue;
+		}
+		// La clé reste la même quand on renomme : les inscriptions existantes suivent le nouveau nom.
+		$key = sanitize_key( $c['key'] ?? '' );
+		if ( '' === $key || isset( $used[ $key ] ) ) {
+			$base = sanitize_key( sanitize_title( $label ) ) ?: 'categorie';
+			$key  = $base;
+			for ( $n = 2; isset( $used[ $key ] ); $n++ ) {
+				$key = $base . '-' . $n;
+			}
+		}
+		$used[ $key ] = true;
+		$v            = volski_parse_amount( $c['prix'] ?? '' );
+		$cats[]       = array(
+			'key'      => $key,
+			'label'    => $label,
+			'prix'     => '' === $v ? '' : (string) $v,
+			'passager' => empty( $c['passager'] ) ? 0 : 1,
+		);
 	}
 	$options = array();
 	foreach ( (array) ( $p['options'] ?? array() ) as $o ) {
@@ -500,7 +561,8 @@ function volski_admin_save_settings() {
 		'presentation'    => sanitize_textarea_field( $p['presentation'] ?? '' ),
 		'programme'       => sanitize_textarea_field( $p['programme'] ?? '' ),
 		'contact'         => sanitize_textarea_field( $p['contact'] ?? '' ),
-		'prix'            => $prix,
+		'prix'            => array(),
+		'categories'      => $cats,
 		'tarif_note'      => sanitize_text_field( $p['tarif_note'] ?? '' ),
 		'options'         => $options,
 		'infos'           => sanitize_textarea_field( $p['infos'] ?? '' ),
@@ -525,8 +587,14 @@ function volski_page_comite() {
 	<div class="wrap volski-admin">
 		<h1>Comité</h1>
 		<?php volski_admin_notice(); ?>
-		<p class="volski-intro">Les membres du comité se connectent sur <a href="<?php echo esc_url( wp_login_url() ); ?>"><?php echo esc_html( wp_login_url() ); ?></a>.
-		Ils arrivent directement sur les inscriptions et ne voient rien d'autre du site : ni pages, ni articles, ni réglages.
+		<?php $front = volski_comite_page_url(); ?>
+		<p class="volski-intro">
+		<?php if ( $front ) : ?>
+			<strong>Adresse à donner au comité : <a href="<?php echo esc_url( $front ); ?>"><?php echo esc_html( $front ); ?></a></strong><br>
+			C'est une page du site avec sa propre connexion (identifiant + mot de passe). Elle marche même si l'administration WordPress est bloquée par une autre extension.<br>
+		<?php endif; ?>
+		Les membres peuvent aussi passer par <a href="<?php echo esc_url( wp_login_url() ); ?>"><?php echo esc_html( wp_login_url() ); ?></a>.
+		Dans tous les cas, ils ne voient rien d'autre du site : ni pages, ni articles, ni réglages.
 		Ils peuvent consulter et modifier les inscriptions, noter les paiements, exporter la liste et changer les infos de la compétition.</p>
 
 		<h2>Membres</h2>
@@ -559,7 +627,7 @@ function volski_page_comite() {
 				<tr><th scope="row"><label for="vc-login">Identifiant</label></th><td><input id="vc-login" name="login" class="regular-text" autocomplete="off"><p class="description">Facultatif. Laisse vide pour « prénom.nom ». Pour un compte partagé par tout le comité, par exemple : Comité.</p></td></tr>
 				<tr><th scope="row"><label for="vc-pass">Mot de passe</label></th><td><input id="vc-pass" type="text" name="pass" class="regular-text" autocomplete="new-password" minlength="8"><p class="description">Facultatif. Au moins 8 caractères. Tu le communiques toi-même au comité.</p></td></tr>
 			</table>
-			<?php submit_button( 'Ajouter au comité' ); ?>
+			<?php volski_submit( 'Ajouter au comité' ); ?>
 		</form>
 	</div>
 	<?php

@@ -137,8 +137,10 @@ class Volski_List_Table extends WP_List_Table {
 
 	protected function column_categories( $r ) {
 		$out = '';
+		$keys = array_keys( volski_categories() );
 		foreach ( array_filter( explode( ',', $r['categories'] ) ) as $k ) {
-			$out .= '<span class="volski-chip volski-chip-' . esc_attr( $k ) . '">' . esc_html( volski_categories()[ $k ] ?? $k ) . '</span> ';
+			$idx  = array_search( $k, $keys, true );
+			$out .= '<span class="volski-chip volski-chip-c' . ( false === $idx ? 'x' : ( $idx % 4 ) ) . '">' . esc_html( volski_categories_label( $k ) ) . '</span> ';
 		}
 		if ( '' !== $r['passager'] ) {
 			$out .= '<span class="volski-sub">Passager : ' . esc_html( $r['passager'] ) . '</span>';

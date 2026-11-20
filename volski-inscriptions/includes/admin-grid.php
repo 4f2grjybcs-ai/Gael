@@ -20,10 +20,12 @@ function volski_opt_qty( $json, $label ) {
 	return 0;
 }
 
-function volski_page_grid() {
+function volski_page_grid( $front_url = '' ) {
 	if ( ! current_user_can( VOLSKI_CAP ) ) {
 		return;
 	}
+	$front_url = is_string( $front_url ) ? $front_url : '';
+	$base      = $front_url ? remove_query_arg( array( 'vq', 'vcat', 'vpay', 'msg', 'err', 'n' ), $front_url ) : admin_url( 'admin.php?page=volski-suivi' );
 	global $wpdb;
 	$f     = volski_current_filters();
 	$rows  = $wpdb->get_results( 'SELECT * FROM ' . volski_table() . ' WHERE ' . volski_where( $f ) . ' ORDER BY nom, prenom', ARRAY_A ); // phpcs:ignore
@@ -32,21 +34,27 @@ function volski_page_grid() {
 	$sum   = array( 'paye' => 0, 'du' => 0.0, 'recu' => 0.0, 'opt' => array_fill( 0, count( $opts ), 0 ) );
 	?>
 	<div class="wrap volski-admin volski-grid-wrap">
-		<h1 class="wp-heading-inline">Tableau de suivi</h1>
+		<?php if ( ! $front_url ) : ?><h1 class="wp-heading-inline">Tableau de suivi</h1><?php endif; ?>
 		<a href="<?php echo esc_url( wp_nonce_url( add_query_arg( $f, admin_url( 'admin-post.php?action=volski_export' ) ), 'volski_export' ) ); ?>" class="page-title-action">Exporter pour Excel</a>
 		<hr class="wp-header-end">
 		<?php volski_admin_notice(); ?>
 		<p class="volski-intro">Coche, choisis, corrige directement dans le tableau, puis clique sur <strong>Enregistrer les modifications</strong>. Les lignes modifiées sont surlignées.
 		Si tu changes les options d'une personne, son total est recalculé (sauf si tu modifies aussi le total à la main).</p>
 
-		<form method="get" class="volski-grid-filters">
-			<input type="hidden" name="page" value="volski-suivi">
+		<form method="get" class="volski-grid-filters" action="<?php echo esc_url( strtok( $base, '?' ) ); ?>">
+			<?php
+			// Garde les paramètres de l'adresse (page=…, page_id=…, vs=…) quand on filtre.
+			wp_parse_str( (string) wp_parse_url( $base, PHP_URL_QUERY ), $keep );
+			foreach ( $keep as $k => $v ) {
+				echo '<input type="hidden" name="' . esc_attr( $k ) . '" value="' . esc_attr( $v ) . '">';
+			}
+			?>
 			<label class="screen-reader-text" for="vg-s">Rechercher</label>
-			<input type="search" id="vg-s" name="s" value="<?php echo esc_attr( $f['s'] ?? '' ); ?>" placeholder="Nom, e-mail, téléphone…">
-			<select name="cat"><option value="">Toutes catégories</option><?php foreach ( volski_categories() as $k => $l ) : ?><option value="<?php echo esc_attr( $k ); ?>" <?php selected( $f['cat'] ?? '', $k ); ?>><?php echo esc_html( $l ); ?></option><?php endforeach; ?></select>
-			<select name="paiement"><option value="">Payé et à payer</option><?php foreach ( volski_paiements() as $k => $l ) : ?><option value="<?php echo esc_attr( $k ); ?>" <?php selected( $f['paiement'] ?? '', $k ); ?>><?php echo esc_html( $l ); ?></option><?php endforeach; ?></select>
+			<input type="search" id="vg-s" name="vq" value="<?php echo esc_attr( $f['s'] ?? '' ); ?>" placeholder="Nom, e-mail, téléphone…">
+			<select name="vcat" aria-label="Catégorie"><option value="">Toutes catégories</option><?php foreach ( volski_categories() as $k => $l ) : ?><option value="<?php echo esc_attr( $k ); ?>" <?php selected( $f['cat'] ?? '', $k ); ?>><?php echo esc_html( $l ); ?></option><?php endforeach; ?></select>
+			<select name="vpay" aria-label="Paiement"><option value="">Payé et à payer</option><?php foreach ( volski_paiements() as $k => $l ) : ?><option value="<?php echo esc_attr( $k ); ?>" <?php selected( $f['paiement'] ?? '', $k ); ?>><?php echo esc_html( $l ); ?></option><?php endforeach; ?></select>
 			<button class="button">Filtrer</button>
-			<?php if ( $f ) : ?><a href="<?php echo esc_url( admin_url( 'admin.php?page=volski-suivi' ) ); ?>">Tout afficher</a><?php endif; ?>
+			<?php if ( $f ) : ?><a href="<?php echo esc_url( $base ); ?>">Tout afficher</a><?php endif; ?>
 		</form>
 
 		<?php if ( ! $rows ) : ?>
@@ -54,13 +62,14 @@ function volski_page_grid() {
 		<?php else : ?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="volski-grid">
 			<input type="hidden" name="action" value="volski_grid">
-			<input type="hidden" name="back" value="<?php echo esc_attr( http_build_query( $f ) ); ?>">
+			<?php if ( $front_url ) : ?><input type="hidden" name="volski_return" value="<?php echo esc_url( $base ); ?>"><?php endif; ?>
+			<input type="hidden" name="back" value="<?php echo esc_attr( http_build_query( array_filter( array( 'vq' => $f['s'] ?? '', 'vcat' => $f['cat'] ?? '', 'vpay' => $f['paiement'] ?? '' ) ) ) ); ?>">
 			<?php wp_nonce_field( 'volski_grid' ); ?>
 			<div class="volski-grid-scroll">
 			<table class="widefat volski-grid">
 				<thead><tr>
 					<th class="vg-name">Participant</th>
-					<th>Catégories</th>
+					<th>Catégorie</th>
 					<?php foreach ( $opts as $o ) : ?><th class="vg-opt"><?php echo esc_html( $o['label'] ); ?></th><?php endforeach; ?>
 					<th class="vg-paid">Payé</th>
 					<th>Moyen</th>
@@ -81,7 +90,12 @@ function volski_page_grid() {
 					<tr data-row>
 						<td class="vg-name">
 							<input type="hidden" name="rows[<?php echo $id; ?>][on]" value="1">
-							<a href="<?php echo esc_url( admin_url( 'admin.php?page=volski&action=edit&id=' . $id ) ); ?>"><strong><?php echo esc_html( $r['prenom'] . ' ' . $r['nom'] ); ?></strong></a>
+							<?php if ( $front_url ) : ?>
+								<strong><?php echo esc_html( $r['prenom'] . ' ' . $r['nom'] ); ?></strong>
+								<span class="volski-sub"><?php echo esc_html( volski_sexes()[ $r['sexe'] ] ?? '' ); ?> · <a href="mailto:<?php echo esc_attr( $r['email'] ); ?>"><?php echo esc_html( $r['email'] ); ?></a></span>
+							<?php else : ?>
+								<a href="<?php echo esc_url( admin_url( 'admin.php?page=volski&action=edit&id=' . $id ) ); ?>"><strong><?php echo esc_html( $r['prenom'] . ' ' . $r['nom'] ); ?></strong></a>
+							<?php endif; ?>
 							<span class="volski-sub"><?php echo esc_html( $r['telephone'] ); ?></span>
 						</td>
 						<td><?php echo esc_html( volski_categories_label( $r['categories'] ) ); ?></td>

@@ -16,7 +16,7 @@ Inscription en ligne à une compétition de vol et ski, avec un espace réservé
 
 **Page de l'événement** : bannière (photo ou couleur) avec dates, lieu et bouton « S'inscrire », présentation, programme heure par heure, infos pratiques avec lien vers la carte, tarifs par catégorie et options.
 
-**Tarifs et options** : un prix par catégorie, en CHF (chaque pilote en choisit une seule) et des options à ajouter, par exemple **Abonnement télécabine**, **Souper**, **+1 au souper**. Une option peut dépendre d'une autre : « +1 au souper » n'est proposé que si « Souper » est coché. Le total s'affiche en direct dans le formulaire et figure dans les e-mails.
+**Catégories, tarifs et options** (tout se modifie dans Infos compétition : renommer, ajouter, retirer) : des catégories avec leur prix en CHF (par défaut Solo normal, Parakite, Biplace ; chaque pilote en choisit une seule ; « Passager » demande le nom du passager, ex. Biplace) et des options à ajouter, par exemple **Abonnement télécabine**, **Souper**, **+1 au souper**. Une option peut dépendre d'une autre : « +1 au souper » n'est proposé que si « Souper » est coché. Le total s'affiche en direct dans le formulaire et figure dans les e-mails.
 
 **Formulaire** : prénom, nom, e-mail, téléphone, sexe (Homme / Femme), catégorie Solo normal, Parakite ou Biplace (une seule par pilote ; nom du passager si Biplace), contact d'urgence, commentaire. Une case pour apparaître dans la liste publique, une case obligatoire d'accord sur l'utilisation des données. Protection anti-robots et refus des doublons.
 
@@ -37,11 +37,18 @@ Le paiement ne se fait pas en ligne : l'organisation recontacte les participants
 
 ## Espace comité
 
-Menu **Vol & Ski → Comité** (réservé aux administrateurs). Deux façons de faire :
-- **un compte partagé** par tout le comité : remplis « Prénom ou nom du compte », « Identifiant » et « Mot de passe » (e-mail facultatif) ; le compte est utilisable tout de suite ;
+À l'installation, l'extension crée une page **Espace comité** (adresse affichée dans **Vol & Ski → Comité**). Elle a sa propre connexion (identifiant + mot de passe) et contient :
+- les compteurs (inscrits par catégorie, hommes / femmes, options, payés) ;
+- le **tableau de suivi** (payé, moyen de paiement, options, total, note) et l'**export Excel** ;
+- les **infos de la compétition** (page, catégories, tarifs, options).
+
+Elle ne dépend pas de l'administration WordPress : elle marche même si une autre extension (WooCommerce, sécurité, adhésion…) bloque l'administration pour les comptes non-administrateurs.
+
+Créer les comptes : **Vol & Ski → Comité** (réservé aux administrateurs).
+- **un compte partagé** par tout le comité : « Prénom ou nom du compte », « Identifiant » et « Mot de passe » ; le compte est utilisable tout de suite ;
 - **un compte par personne** : prénom + e-mail ; la personne reçoit un e-mail pour choisir son mot de passe.
 
-Les membres se connectent sur `tonsite.fr/wp-login.php` et arrivent directement sur les inscriptions. Ils voient **uniquement** l'extension (inscriptions, infos compétition) et leur profil : aucune page, aucun article, aucun réglage du site. Toute autre adresse de l'admin les renvoie sur les inscriptions. Ils ne peuvent pas ajouter d'autres membres.
+Les comptes du comité ne voient rien d'autre du site. S'ils passent par l'administration WordPress, ils n'y voient que l'extension et leur profil.
 
 ## Désinstaller
 

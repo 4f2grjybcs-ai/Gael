@@ -17,7 +17,7 @@ function volski_recap( $r ) {
 		'Catégorie : ' . volski_categories_label( $r['categories'] ),
 	);
 	if ( '' !== $r['passager'] ) {
-		$lines[] = 'Passager biplace : ' . $r['passager'];
+		$lines[] = 'Passager : ' . $r['passager'];
 	}
 	$lines[] = 'Contact d\'urgence : ' . $r['urgence_nom'] . ' – ' . $r['urgence_tel'];
 	$opts    = json_decode( (string) ( $r['options_choisies'] ?? '' ), true );

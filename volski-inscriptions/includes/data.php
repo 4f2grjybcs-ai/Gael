@@ -13,16 +13,52 @@ function volski_table() {
 	return $wpdb->prefix . 'volski_inscriptions';
 }
 
-/** Catégories proposées (clé => libellé). Un participant peut en cocher plusieurs. */
+/**
+ * Catégories définies dans « Infos compétition » : liste de [ key, label, prix, passager ].
+ * Sans réglage enregistré : Solo normal, Parakite, Biplace (en reprenant les anciens prix).
+ */
+function volski_category_rows( $s = null ) {
+	$s    = $s ?: volski_settings();
+	$rows = isset( $s['categories'] ) && is_array( $s['categories'] ) ? $s['categories'] : array();
+	if ( ! $rows ) {
+		$old  = isset( $s['prix'] ) && is_array( $s['prix'] ) ? $s['prix'] : array();
+		$rows = array(
+			array( 'key' => 'solo', 'label' => 'Solo normal', 'prix' => $old['solo'] ?? '', 'passager' => 0 ),
+			array( 'key' => 'parakite', 'label' => 'Parakite', 'prix' => $old['parakite'] ?? '', 'passager' => 0 ),
+			array( 'key' => 'biplace', 'label' => 'Biplace', 'prix' => $old['biplace'] ?? '', 'passager' => 1 ),
+		);
+	}
+	$out = array();
+	foreach ( $rows as $r ) {
+		if ( ! empty( $r['key'] ) && ! empty( $r['label'] ) ) {
+			$out[] = array(
+				'key'      => (string) $r['key'],
+				'label'    => (string) $r['label'],
+				'prix'     => (string) ( $r['prix'] ?? '' ),
+				'passager' => empty( $r['passager'] ) ? 0 : 1,
+			);
+		}
+	}
+	return $out;
+}
+
+/** Catégories proposées (clé => libellé). Chaque pilote en choisit une seule. */
 function volski_categories() {
-	return apply_filters(
-		'volski_categories',
-		array(
-			'solo'     => 'Solo normal',
-			'parakite' => 'Parakite',
-			'biplace'  => 'Biplace',
-		)
-	);
+	$out = array();
+	foreach ( volski_category_rows() as $r ) {
+		$out[ $r['key'] ] = $r['label'];
+	}
+	return apply_filters( 'volski_categories', $out );
+}
+
+/** Vrai si la catégorie demande le nom d'un passager (ex. Biplace). */
+function volski_cat_passager( $key ) {
+	foreach ( volski_category_rows() as $r ) {
+		if ( $r['key'] === $key ) {
+			return (bool) $r['passager'];
+		}
+	}
+	return false;
 }
 
 /** Sexe (clé => libellé). */
@@ -69,6 +105,7 @@ function volski_settings() {
 		'infos'           => '',
 		'contact'         => '',
 		'prix'            => array(),
+		'categories'      => array(),
 		'tarif_note'      => '',
 		'options'         => array(
 			array( 'label' => 'Abonnement télécabine', 'prix' => '', 'max' => 1, 'requires' => '' ),
@@ -90,7 +127,7 @@ function volski_categories_label( $stored ) {
 	$all = volski_categories();
 	$out = array();
 	foreach ( array_filter( explode( ',', (string) $stored ) ) as $key ) {
-		$out[] = isset( $all[ $key ] ) ? $all[ $key ] : $key;
+		$out[] = isset( $all[ $key ] ) ? $all[ $key ] : ucfirst( str_replace( array( '-', '_' ), ' ', $key ) );
 	}
 	return implode( ', ', $out );
 }
@@ -124,7 +161,7 @@ function volski_validate( $raw, $public = true ) {
 		'telephone'      => $text( 'telephone', 40 ),
 		'sexe'           => isset( $raw['sexe'] ) ? sanitize_key( $raw['sexe'] ) : '',
 		'categories'     => implode( ',', $cats ),
-		'passager'       => in_array( 'biplace', $cats, true ) ? $text( 'passager', 150 ) : '',
+		'passager'       => ( $cats && volski_cat_passager( $cats[0] ) ) ? $text( 'passager', 150 ) : '',
 		'urgence_nom'    => $text( 'urgence_nom', 150 ),
 		'urgence_tel'    => $text( 'urgence_tel', 40 ),
 		'commentaire'    => isset( $raw['commentaire'] ) ? mb_substr( sanitize_textarea_field( $raw['commentaire'] ), 0, 1000 ) : '',
@@ -169,9 +206,13 @@ function volski_validate( $raw, $public = true ) {
 
 /** Prix d'une catégorie (float), ou null si aucun prix n'est fixé. */
 function volski_prix_categorie( $key, $s = null ) {
-	$s = $s ?: volski_settings();
-	$v = isset( $s['prix'][ $key ] ) ? volski_parse_amount( $s['prix'][ $key ] ) : '';
-	return '' === $v ? null : (float) $v;
+	foreach ( volski_category_rows( $s ) as $r ) {
+		if ( $r['key'] === $key ) {
+			$v = volski_parse_amount( $r['prix'] );
+			return '' === $v ? null : (float) $v;
+		}
+	}
+	return null;
 }
 
 /** Options proposées : liste de [ label, prix (float), max (int) ]. */

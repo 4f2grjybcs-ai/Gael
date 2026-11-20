@@ -10,6 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 function volski_activate() {
 	volski_install_table();
 	volski_install_roles();
+	volski_ensure_comite_page();
 	if ( false === get_option( 'volski_settings' ) ) {
 		add_option( 'volski_settings', volski_settings() );
 	}
@@ -19,6 +20,7 @@ function volski_maybe_upgrade() {
 	if ( get_option( 'volski_db_version' ) !== VOLSKI_DB_VERSION ) {
 		volski_install_table();
 		volski_install_roles();
+		add_action( 'init', 'volski_ensure_comite_page' );
 	}
 }
 

@@ -12,6 +12,7 @@ global $wpdb;
 $wpdb->query( 'DROP TABLE IF EXISTS ' . $wpdb->prefix . 'volski_inscriptions' ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 delete_option( 'volski_settings' );
 delete_option( 'volski_db_version' );
+delete_option( 'volski_comite_page' ); // La page « Espace comité » reste : supprime-la à la main si besoin.
 
 // Les membres du comité perdent leur rôle (leurs comptes deviennent de simples abonnés).
 foreach ( get_users( array( 'role' => 'volski_comite' ) ) as $u ) {

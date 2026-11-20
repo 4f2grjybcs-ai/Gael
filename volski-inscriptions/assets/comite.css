@@ -1,0 +1,37 @@
+/* Espace comité sur le site : reprend l'allure de l'administration, dans le thème. */
+.volski.volski-comite{max-width:none;font-size:15px}
+.volski-comite .wrap{margin:0}
+.volski-comite h1{font-size:1.5em;margin:18px 0 8px;display:inline-block}
+.volski-comite h2{font-size:1.2em;margin:24px 0 8px}
+.volski-comite .wp-header-end{border:0;margin:6px 0}
+.volski-login{max-width:420px;margin:24px auto;border:1px solid var(--vs-line);border-radius:12px;padding:24px}
+.volski-login h2{margin:0 0 4px}
+.volski-login .volski-form{gap:14px}
+.volski-comite-bar{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center;padding:10px 14px;border:1px solid var(--vs-line);border-radius:10px;background:var(--vs-soft)}
+.volski-tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--vs-line);margin:8px 0 12px}
+.volski-tabs a{padding:10px 16px;text-decoration:none;font-weight:600;border:1px solid transparent;border-bottom:0;border-radius:8px 8px 0 0;color:inherit}
+.volski-tabs a[aria-current]{border-color:var(--vs-line);background:var(--vs-soft);margin-bottom:-1px}
+.volski-comite .volski-stat{background:transparent;border-color:var(--vs-line)}
+.volski-comite .button,.volski-comite .page-title-action{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--vs-accent);border-radius:8px;background:transparent;color:var(--vs-accent);font:inherit;font-weight:600;text-decoration:none;cursor:pointer;min-height:40px;margin:4px 6px 4px 0}
+.volski-comite .button-primary{background:var(--vs-accent);color:#fff}
+.volski-comite .button-hero{padding:12px 22px;font-size:1.05em}
+.volski-comite .button-link,.volski-comite .button-link-delete{background:none;border:0;padding:0;color:var(--vs-bad);cursor:pointer;font:inherit}
+.volski-comite .notice{border-left:4px solid var(--vs-ok);padding:10px 14px;margin:10px 0;background:var(--vs-soft);border-radius:4px}
+.volski-comite .notice-error{border-left-color:var(--vs-bad)}
+.volski-comite .notice p{margin:0}
+.volski-comite .description{opacity:.75;font-size:.9em;margin:4px 0 0}
+.volski-comite .form-table{width:100%;border-collapse:collapse}
+.volski-comite .form-table th{text-align:left;vertical-align:top;padding:14px 16px 14px 0;width:200px;font-weight:600}
+.volski-comite .form-table td{padding:10px 0}
+@media (max-width:700px){.volski-comite .form-table th,.volski-comite .form-table td{display:block;width:auto;padding:6px 0}}
+.volski-comite input[type=text],.volski-comite input:not([type]),.volski-comite input[type=url],.volski-comite input[type=email],.volski-comite input[type=search],.volski-comite input[type=number],.volski-comite select,.volski-comite textarea{border:1px solid var(--vs-line);border-radius:6px;padding:7px 9px;font:inherit;color:inherit;background:transparent;max-width:100%}
+.volski-comite .regular-text{width:100%;max-width:26em}
+.volski-comite .large-text{width:100%}
+.volski-comite .small-text{width:6em}
+.volski-comite .widefat{width:100%;border-collapse:collapse}
+.volski-comite .widefat th,.volski-comite .widefat td{padding:8px;border-bottom:1px solid var(--vs-line);text-align:left}
+.volski-comite .volski-grid .vg-name{background:var(--vs-bg,#fff)}
+.volski-comite .volski-grid thead th,.volski-comite .volski-grid tfoot th{background:#f6f7f7;color:#1d2327}
+.volski-comite .volski-grid td{color:inherit}
+.volski-comite .volski-grid-save{background:transparent}
+.volski-comite .screen-reader-text{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
